@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
-import logoUrl from '@/assets/logo-edvanced-20-56059.png'
+import logoUrl from '@/assets/design-sem-nome-5-f6d4a.png'
 
 const navItems = [
   { label: 'Dashboard', icon: Home, path: '/' },
