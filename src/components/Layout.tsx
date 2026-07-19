@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
-import logoUrl from '@/assets/design-sem-nome-5-f6d4a.png'
+import logoUrl from '@/assets/design-sem-nome-4-3f1f0.png'
 
 const navItems = [
   { label: 'Dashboard', icon: Home, path: '/' },
@@ -81,14 +81,14 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-10">
         <div className="p-6">
-          <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
             <img src={logoUrl} alt="Edvanced Business Pro" className="h-10 w-auto object-contain" />
             <span className="font-bold text-xl leading-none text-[#D4AF37] tracking-tight">
               Edvanced
               <br />
               Business Pro
             </span>
-          </div>
+          </Link>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">
           <NavLinks />
@@ -126,7 +126,11 @@ export default function Layout() {
               >
                 <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                 <div className="p-6">
-                  <div className="flex items-center gap-3">
+                  <Link
+                    to="/"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-3 hover:opacity-90 transition-opacity"
+                  >
                     <img
                       src={logoUrl}
                       alt="Edvanced Business Pro"
@@ -137,7 +141,7 @@ export default function Layout() {
                       <br />
                       Business Pro
                     </span>
-                  </div>
+                  </Link>
                 </div>
                 <nav className="px-3 space-y-1.5 mt-2">
                   <NavLinks />
