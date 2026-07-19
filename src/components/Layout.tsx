@@ -83,6 +83,9 @@ export default function Layout() {
         <div className="p-6">
           <div className="flex items-center gap-2">
             <img src={logoUrl} alt="Edvanced Business" className="h-12 w-auto object-contain" />
+            <span className="text-xl font-bold tracking-tight text-[#D4AF37] font-display whitespace-nowrap">
+              Edvanced Business
+            </span>
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">
@@ -127,6 +130,9 @@ export default function Layout() {
                       alt="Edvanced Business"
                       className="h-12 w-auto object-contain"
                     />
+                    <span className="text-xl font-bold tracking-tight text-[#D4AF37] font-display whitespace-nowrap">
+                      Edvanced Business
+                    </span>
                   </div>
                 </div>
                 <nav className="px-3 space-y-1.5 mt-2">
