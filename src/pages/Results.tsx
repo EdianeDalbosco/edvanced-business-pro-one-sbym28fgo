@@ -20,6 +20,8 @@ import { getContacts } from '@/services/contacts'
 import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency } from '@/lib/format'
 import { TrendingUp, Target, CheckSquare, Users } from 'lucide-react'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 const COLORS = ['#d4a017', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6']
 const TASK_COLORS = { todo: '#64748b', doing: '#f59e0b', done: '#10b981' }
@@ -87,6 +89,48 @@ export default function Results() {
     }))
   }, [tasks])
 
+  const handleExportPDF = () => {
+    generatePDF(getBusinessName(), 'Resultados', [
+      {
+        type: 'summary',
+        title: 'Indicadores',
+        items: stats.map((s) => ({ label: s.label, value: String(s.value) })),
+      },
+      {
+        type: 'table',
+        title: 'Receitas vs Despesas (Mensal)',
+        headers: ['Mês', 'Receitas', 'Despesas'],
+        rows: monthlyData.map((m) => [m.month, m.Receitas, m.Despesas]),
+      },
+      {
+        type: 'table',
+        title: 'Distribuição de Tarefas',
+        headers: ['Status', 'Quantidade'],
+        rows: taskData.map((t) => [t.name, t.value]),
+      },
+    ])
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel('resultados', [
+      {
+        name: 'Resumo',
+        headers: ['Indicador', 'Valor'],
+        rows: stats.map((s) => [s.label, s.value]),
+      },
+      {
+        name: 'Mensal',
+        headers: ['Mês', 'Receitas', 'Despesas'],
+        rows: monthlyData.map((m) => [m.month, m.Receitas, m.Despesas]),
+      },
+      {
+        name: 'Tarefas',
+        headers: ['Status', 'Quantidade'],
+        rows: taskData.map((t) => [t.name, t.value]),
+      },
+    ])
+  }
+
   const stats = [
     {
       label: 'Receita Total',
@@ -127,9 +171,12 @@ export default function Results() {
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Resultados</h1>
-        <p className="text-muted-foreground">Acompanhe a performance geral do seu negócio.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Resultados</h1>
+          <p className="text-muted-foreground">Acompanhe a performance geral do seu negócio.</p>
+        </div>
+        <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">

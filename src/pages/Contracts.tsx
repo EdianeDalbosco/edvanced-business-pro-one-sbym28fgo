@@ -12,16 +12,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createContract } from '@/services/contracts'
+import { createContract, getContracts } from '@/services/contracts'
 import { getContacts } from '@/services/contacts'
 import { getProducts } from '@/services/products'
 import { useToast } from '@/hooks/use-toast'
 import { Link } from 'react-router-dom'
 import { Package, Wrench, AlertCircle } from 'lucide-react'
 import { useRealtime } from '@/hooks/use-realtime'
-import { formatCurrency } from '@/lib/format'
+import { formatCurrency, formatDate } from '@/lib/format'
 import { generateMentoringTemplate } from '@/lib/mentoring-template'
 import { cn } from '@/lib/utils'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 function maskCpfCnpj(value: string) {
   const v = value.replace(/\D/g, '')
@@ -178,6 +180,58 @@ export default function Contracts() {
     }
   }
 
+  const handleExportPDF = async () => {
+    const contracts = await getContracts()
+    generatePDF(getBusinessName(), 'Contratos', [
+      {
+        type: 'table',
+        title: 'Lista de Contratos',
+        headers: ['Título', 'Cliente', 'Valor', 'Status', 'Início', 'Término'],
+        rows: contracts.map((c: any) => [
+          c.title,
+          c.expand?.contact_id?.name || '',
+          formatCurrency(c.value || 0),
+          c.status || '',
+          c.start_date ? formatDate(c.start_date) : '',
+          c.end_date ? formatDate(c.end_date) : '',
+        ]),
+      },
+    ])
+  }
+
+  const handleExportExcel = async () => {
+    const contracts = await getContracts()
+    exportToExcel('contratos', [
+      {
+        name: 'Contratos',
+        headers: [
+          'Título',
+          'Cliente',
+          'Produto',
+          'Valor',
+          'Status',
+          'Nº Documento',
+          'Data Início',
+          'Data Término',
+          'Mentor',
+          'Mentorado',
+        ],
+        rows: contracts.map((c: any) => [
+          c.title,
+          c.expand?.contact_id?.name || '',
+          c.expand?.product_id?.name || '',
+          c.value || 0,
+          c.status || '',
+          c.document_number || '',
+          c.start_date || '',
+          c.end_date || '',
+          c.mentor_name || '',
+          c.mentee_name || '',
+        ]),
+      },
+    ])
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 shrink-0">
@@ -189,9 +243,12 @@ export default function Contracts() {
             Preencha os dados e gere o contrato para enviar ao cliente
           </p>
         </div>
-        <Button variant="outline" onClick={handlePrint} className="shrink-0 bg-background">
-          <Printer className="mr-2 h-4 w-4" /> Imprimir / PDF
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+          <Button variant="outline" onClick={handlePrint} className="bg-background">
+            <Printer className="mr-2 h-4 w-4" /> Imprimir / PDF
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden">

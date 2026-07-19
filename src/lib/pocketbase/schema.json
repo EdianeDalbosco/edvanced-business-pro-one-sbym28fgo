@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T20:57:17.140Z",
+  "generatedAt": "2026-07-19T21:40:41.744Z",
   "collections": [
     {
       "name": "users",
@@ -262,6 +262,20 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "expense_classification",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["fixed", "variable"]
+        },
+        {
+          "name": "contact_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contacts"
         }
       ],
       "indexes": ["CREATE INDEX idx_finance_user_date ON finance (user_id, date)"]
@@ -602,6 +616,13 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "contact_id",
+          "type": "relation",
+          "required": false,
+          "system": false,
+          "collectionRef": "contacts"
         }
       ],
       "indexes": ["CREATE INDEX idx_tasks_user_date ON tasks (user_id, due_date)"]
@@ -822,6 +843,67 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_marketing_content_campaign ON marketing_content (campaign_id)"]
+    },
+    {
+      "name": "client_interactions",
+      "type": "base",
+      "apiRules": {
+        "list": "user_id = @request.auth.id",
+        "view": "user_id = @request.auth.id",
+        "create": "@request.auth.id != ''",
+        "update": "user_id = @request.auth.id",
+        "delete": "user_id = @request.auth.id"
+      },
+      "fields": [
+        {
+          "name": "user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "contact_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "contacts"
+        },
+        {
+          "name": "date",
+          "type": "date",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "type",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["call", "email", "meeting", "note"]
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "required": true,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_interactions_contact ON client_interactions (contact_id, date)"]
     }
   ]
 }

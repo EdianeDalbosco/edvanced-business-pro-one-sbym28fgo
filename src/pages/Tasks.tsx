@@ -15,6 +15,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { Plus, Check, Clock, AlertCircle, Trash2 } from 'lucide-react'
 import { formatDate } from '@/lib/format'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 const COLUMNS = [
   { id: 'todo', label: 'A Fazer', icon: Clock, color: 'text-slate-400' },
@@ -51,6 +53,41 @@ export default function Tasks() {
     }
   }
 
+  const handleExportPDF = () => {
+    const statusLabel = (s: string) =>
+      s === 'todo' ? 'A Fazer' : s === 'doing' ? 'Fazendo' : 'Concluído'
+    const priorityLabel = (p: string) =>
+      p === 'high' ? 'Alta' : p === 'medium' ? 'Média' : 'Baixa'
+    generatePDF(getBusinessName(), 'Tarefas', [
+      {
+        type: 'table',
+        title: 'Tarefas',
+        headers: ['Título', 'Status', 'Prioridade', 'Vencimento'],
+        rows: tasks.map((t) => [
+          t.title,
+          statusLabel(t.status),
+          priorityLabel(t.priority),
+          t.due_date ? formatDate(t.due_date) : '',
+        ]),
+      },
+    ])
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel('tarefas', [
+      {
+        name: 'Tarefas',
+        headers: ['Título', 'Status', 'Prioridade', 'Vencimento'],
+        rows: tasks.map((t) => [
+          t.title,
+          t.status,
+          t.priority,
+          t.due_date ? formatDate(t.due_date) : '',
+        ]),
+      },
+    ])
+  }
+
   return (
     <div className="space-y-8 animate-fade-in h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -58,45 +95,48 @@ export default function Tasks() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Tarefas</h1>
           <p className="text-muted-foreground">Organize seu dia e aumente sua produtividade.</p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" /> Nova Tarefa
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Tarefa</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input name="title" required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Data Limite</Label>
-                  <Input type="date" name="due_date" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Prioridade</Label>
-                  <select name="priority" className={selectClass}>
-                    <option value="low">Baixa</option>
-                    <option value="medium">Média</option>
-                    <option value="high">Alta</option>
-                  </select>
-                </div>
-              </div>
-              <input type="hidden" name="status" value="todo" />
-              <Button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Salvar Tarefa
+        <div className="flex items-center gap-2">
+          <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" /> Nova Tarefa
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Tarefa</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAdd} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input name="title" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Data Limite</Label>
+                    <Input type="date" name="due_date" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Prioridade</Label>
+                    <select name="priority" className={selectClass}>
+                      <option value="low">Baixa</option>
+                      <option value="medium">Média</option>
+                      <option value="high">Alta</option>
+                    </select>
+                  </div>
+                </div>
+                <input type="hidden" name="status" value="todo" />
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Salvar Tarefa
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 pb-4">

@@ -17,6 +17,8 @@ import { useToast } from '@/hooks/use-toast'
 import { Plus, Phone, UserCheck, GripVertical } from 'lucide-react'
 import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 const STAGES = [
   { id: 'prospeccao', label: 'Prospecção', color: 'border-t-blue-600' },
@@ -97,6 +99,44 @@ export default function Pipeline() {
     setDragOverStage(null)
   }
 
+  const handleExportPDF = () => {
+    const sections: any[] = []
+    STAGES.forEach((stage) => {
+      const stageProspects = prospects.filter((p) => p.pipeline_stage === stage.id)
+      if (stageProspects.length > 0) {
+        sections.push({
+          type: 'table',
+          title: stage.label,
+          headers: ['Nome', 'Telefone', 'Valor'],
+          rows: stageProspects.map((p) => [
+            p.name,
+            p.phone || '',
+            formatCurrency(Number(p.value) || 0),
+          ]),
+        })
+      }
+    })
+    if (sections.length === 0)
+      sections.push({ type: 'table', title: 'Oportunidades', headers: ['Nome'], rows: [] })
+    generatePDF(getBusinessName(), 'Pipeline de Vendas', sections)
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel('pipeline', [
+      {
+        name: 'Oportunidades',
+        headers: ['Nome', 'Email', 'Telefone', 'Etapa', 'Valor'],
+        rows: prospects.map((p) => [
+          p.name,
+          p.email || '',
+          p.phone || '',
+          STAGES.find((s) => s.id === p.pipeline_stage)?.label || p.pipeline_stage || '',
+          Number(p.value) || 0,
+        ]),
+      },
+    ])
+  }
+
   return (
     <div className="space-y-8 animate-fade-in flex flex-col h-[calc(100vh-100px)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0">
@@ -106,45 +146,48 @@ export default function Pipeline() {
             Arraste e solte oportunidades entre as etapas do funil.
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" /> Nova Oportunidade
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Adicionar Oportunidade</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAdd} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome / Empresa</Label>
-                <Input name="name" required />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Email</Label>
-                  <Input type="email" name="email" />
-                </div>
-                <div className="space-y-2">
-                  <Label>Telefone</Label>
-                  <Input name="phone" />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Valor (R$)</Label>
-                <Input type="number" name="value" step="0.01" min="0" />
-              </div>
-              <input type="hidden" name="pipeline_stage" value="prospeccao" />
-              <Button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Salvar
+        <div className="flex items-center gap-2">
+          <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" /> Nova Oportunidade
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Adicionar Oportunidade</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAdd} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Nome / Empresa</Label>
+                  <Input name="name" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" name="email" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input name="phone" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor (R$)</Label>
+                  <Input type="number" name="value" step="0.01" min="0" />
+                </div>
+                <input type="hidden" name="pipeline_stage" value="prospeccao" />
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Salvar
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="flex overflow-x-auto gap-4 pb-4 snap-x flex-1 items-stretch">

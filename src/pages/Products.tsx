@@ -18,6 +18,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency } from '@/lib/format'
 import { Plus, Search, Pencil, Trash2, Package, Wrench } from 'lucide-react'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 const selectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground'
@@ -95,12 +97,15 @@ export default function Products() {
           </h1>
           <p className="text-muted-foreground">Gerencie seu catálogo de ofertas.</p>
         </div>
-        <Button
-          onClick={openCreate}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
-        >
-          <Plus className="mr-2 h-4 w-4" /> Novo Item
-        </Button>
+        <div className="flex items-center gap-2">
+          <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+          <Button
+            onClick={openCreate}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+          >
+            <Plus className="mr-2 h-4 w-4" /> Novo Item
+          </Button>
+        </div>
       </div>
 
       <Dialog

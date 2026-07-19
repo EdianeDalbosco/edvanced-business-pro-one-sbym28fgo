@@ -17,6 +17,8 @@ import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { Target, Plus, CheckCircle2, Circle, Clock } from 'lucide-react'
 import { formatDate } from '@/lib/format'
+import { ExportButtons } from '@/components/export-buttons'
+import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 
 export default function Planning() {
   const [planning, setPlanning] = useState<any>(null)
@@ -76,6 +78,52 @@ export default function Planning() {
     await updateGoal(goal.id, { status: nextStatus })
   }
 
+  const handleExportPDF = () => {
+    const sections: any[] = []
+    if (planning) {
+      sections.push({
+        type: 'summary',
+        title: 'Canvas Estratégico',
+        items: [
+          { label: 'Missão', value: planning.mission || '' },
+          { label: 'Visão', value: planning.vision || '' },
+          { label: 'Valores', value: planning.values || '' },
+          { label: 'Estratégia', value: planning.strategy || '' },
+        ],
+      })
+    }
+    sections.push({
+      type: 'table',
+      title: 'Metas',
+      headers: ['Título', 'Status', 'Atual', 'Alvo', 'Prazo'],
+      rows: goals.map((g) => [
+        g.title,
+        g.status,
+        g.current_value || 0,
+        g.target_value || 0,
+        g.deadline ? formatDate(g.deadline) : '',
+      ]),
+    })
+    generatePDF(getBusinessName(), 'Planejamento & Metas', sections)
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel('planejamento', [
+      {
+        name: 'Metas',
+        headers: ['Título', 'Descrição', 'Valor Atual', 'Valor Alvo', 'Prazo', 'Status'],
+        rows: goals.map((g) => [
+          g.title,
+          g.description || '',
+          g.current_value || 0,
+          g.target_value || 0,
+          g.deadline ? formatDate(g.deadline) : '',
+          g.status,
+        ]),
+      },
+    ])
+  }
+
   if (!planning) return null
 
   const selectClass =
@@ -92,58 +140,61 @@ export default function Planning() {
             Defina o rumo do seu negócio e acompanhe seus objetivos.
           </p>
         </div>
-        <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
-          <DialogTrigger asChild>
-            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-              <Plus className="mr-2 h-4 w-4" /> Nova Meta
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Nova Meta</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleAddGoal} className="space-y-4">
-              <div className="space-y-2">
-                <Label>Título</Label>
-                <Input name="title" required />
-              </div>
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea name="description" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Valor Alvo</Label>
-                  <Input type="number" name="target_value" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor Atual</Label>
-                  <Input type="number" name="current_value" defaultValue={0} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Prazo</Label>
-                  <Input type="date" name="deadline" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Status</Label>
-                  <select name="status" className={selectClass} defaultValue="in_progress">
-                    <option value="in_progress">Em Andamento</option>
-                    <option value="pending">Pendente</option>
-                    <option value="completed">Concluída</option>
-                  </select>
-                </div>
-              </div>
-              <Button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Salvar Meta
+        <div className="flex items-center gap-2">
+          <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
+          <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
+                <Plus className="mr-2 h-4 w-4" /> Nova Meta
               </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Nova Meta</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAddGoal} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Título</Label>
+                  <Input name="title" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea name="description" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Valor Alvo</Label>
+                    <Input type="number" name="target_value" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Valor Atual</Label>
+                    <Input type="number" name="current_value" defaultValue={0} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Prazo</Label>
+                    <Input type="date" name="deadline" required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <select name="status" className={selectClass} defaultValue="in_progress">
+                      <option value="in_progress">Em Andamento</option>
+                      <option value="pending">Pendente</option>
+                      <option value="completed">Concluída</option>
+                    </select>
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Salvar Meta
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">

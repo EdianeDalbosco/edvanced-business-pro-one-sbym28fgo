@@ -5,4 +5,10 @@ export const createTransaction = (data: any) =>
   pb.collection('finance').create({ ...data, user_id: pb.authStore.record?.id })
 export const updateTransaction = (id: string, data: any) =>
   pb.collection('finance').update(id, data)
+export const getFinanceByContact = (contactId: string) =>
+  pb.collection('finance').getFullList({
+    filter: `contact_id = "${contactId}"`,
+    sort: '-date',
+  })
+
 export const deleteTransaction = (id: string) => pb.collection('finance').delete(id)
