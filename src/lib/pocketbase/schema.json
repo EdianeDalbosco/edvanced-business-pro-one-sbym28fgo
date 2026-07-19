@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T22:50:49.522Z",
+  "generatedAt": "2026-07-19T23:02:13.348Z",
   "collections": [
     {
       "name": "users",
@@ -105,6 +105,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "priorities",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE UNIQUE INDEX idx_planning_user ON business_planning (user_id)"]
@@ -158,13 +164,6 @@
           "system": false
         },
         {
-          "name": "status",
-          "type": "select",
-          "required": false,
-          "system": false,
-          "selectValues": ["pending", "in_progress", "completed", "cancelled"]
-        },
-        {
           "name": "created",
           "type": "autodate",
           "required": false,
@@ -177,6 +176,69 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "related_objective",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "period_month",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "expected_result",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "indicator",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "initial_value",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "observations",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "priority",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["low", "medium", "high"]
+        },
+        {
+          "name": "progress_percent",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": [
+            "nao_iniciada",
+            "em_andamento",
+            "em_risco",
+            "concluida",
+            "nao_alcancada",
+            "cancelada"
+          ]
         }
       ],
       "indexes": ["CREATE INDEX idx_goals_user_status ON goals (user_id, status)"]

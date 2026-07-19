@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Target } from 'lucide-react'
-import { calcProgress } from '@/lib/dashboard-utils'
+import { getGoalProgress } from '@/lib/goal-utils'
 
 export function GoalsTracker({ goals }: { goals: any[] }) {
   return (
@@ -15,7 +15,7 @@ export function GoalsTracker({ goals }: { goals: any[] }) {
           <p className="text-sm text-muted-foreground text-center py-4">Nenhuma pendência.</p>
         ) : (
           goals.slice(0, 5).map((goal) => {
-            const progress = calcProgress(goal.current_value || 0, goal.target_value || 0)
+            const progress = getGoalProgress(goal)
             return (
               <div key={goal.id} className="space-y-2">
                 <div className="flex justify-between text-sm">

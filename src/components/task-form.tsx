@@ -20,6 +20,7 @@ interface Props {
   contacts: any[]
   goals: any[]
   contracts: any[]
+  presetGoalId?: string
 }
 
 const emptyForm = {
@@ -58,6 +59,7 @@ export function TaskForm({
   contacts,
   goals,
   contracts,
+  presetGoalId,
 }: Props) {
   const { toast } = useToast()
   const [form, setForm] = useState({ ...emptyForm })
@@ -88,9 +90,9 @@ export function TaskForm({
         contract_id: editingTask.contract_id || '',
       })
     } else {
-      setForm({ ...emptyForm })
+      setForm({ ...emptyForm, goal_id: presetGoalId || '' })
     }
-  }, [editingTask, open])
+  }, [editingTask, open, presetGoalId])
 
   const update = (key: string, val: string) => setForm((prev) => ({ ...prev, [key]: val }))
 

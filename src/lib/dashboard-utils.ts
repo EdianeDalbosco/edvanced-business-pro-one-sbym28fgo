@@ -50,12 +50,14 @@ export function getPreviousMonthPaidExpense(finance: any[]): number {
 }
 
 export function getActiveGoals(goals: any[]): any[] {
-  return goals.filter((g) => g.status === 'in_progress' || g.status === 'pending')
+  return goals.filter(
+    (g) => g.status === 'em_andamento' || g.status === 'nao_iniciada' || g.status === 'em_risco',
+  )
 }
 
 export function getPriorityTasks(tasks: any[]): any[] {
   return tasks
-    .filter((t) => t.priority === 'high' && t.status !== 'done')
+    .filter((t) => t.priority === 'high' && t.status !== 'concluido')
     .sort((a, b) => {
       const dateA = a.due_date ? new Date(a.due_date).getTime() : Infinity
       const dateB = b.due_date ? new Date(b.due_date).getTime() : Infinity

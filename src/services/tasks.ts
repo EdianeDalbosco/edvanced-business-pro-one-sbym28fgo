@@ -18,3 +18,9 @@ export const getTasksByContact = (contactId: string) =>
     filter: `contact_id = "${contactId}" && status != 'concluido'`,
     sort: 'due_date',
   })
+
+export const getTasksByGoal = (goalId: string) =>
+  pb.collection('tasks').getFullList({
+    filter: `goal_id = "${goalId}"`,
+    sort: 'due_date',
+  })

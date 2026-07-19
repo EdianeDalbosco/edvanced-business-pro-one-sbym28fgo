@@ -1,81 +1,111 @@
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { getPlanning, savePlanning } from '@/services/planning'
-import { getGoals, createGoal, updateGoal } from '@/services/goals'
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+  SelectValue,
+} from '@/components/ui/select'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Plus, Calendar, ListChecks } from 'lucide-react'
+import { getPlanning } from '@/services/planning'
+import { getGoals, deleteGoal } from '@/services/goals'
+import { getTasks } from '@/services/tasks'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
-import { Target, Plus, CheckCircle2, Circle, Clock } from 'lucide-react'
-import { formatDate } from '@/lib/format'
+import { StrategicContext } from '@/components/strategic-context'
+import { GoalForm } from '@/components/goal-form'
+import { GoalCard } from '@/components/goal-card'
+import { GoalDetailDialog } from '@/components/goal-detail-dialog'
 import { ExportButtons } from '@/components/export-buttons'
 import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
+import { formatDate } from '@/lib/format'
+import {
+  GOAL_STATUS_LABELS,
+  GOAL_STATUS_COLORS,
+  GOAL_PRIORITY_LABELS,
+  MONTH_OPTIONS,
+  getMonthLabel,
+  getGoalProgress,
+} from '@/lib/goal-utils'
+
+type ViewTab = 'annual' | 'monthly' | 'objective' | 'status' | 'priority' | 'action_plan'
+const STATUS_ORDER = [
+  'nao_iniciada',
+  'em_andamento',
+  'em_risco',
+  'concluida',
+  'nao_alcancada',
+  'cancelada',
+]
 
 export default function Planning() {
   const [planning, setPlanning] = useState<any>(null)
   const [goals, setGoals] = useState<any[]>([])
-  const [goalDialogOpen, setGoalDialogOpen] = useState(false)
-  const [savingPlan, setSavingPlan] = useState(false)
+  const [tasks, setTasks] = useState<any[]>([])
+  const [view, setView] = useState<ViewTab>('annual')
+  const [monthFilter, setMonthFilter] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingGoal, setEditingGoal] = useState<any | null>(null)
+  const [detailGoal, setDetailGoal] = useState<any | null>(null)
+  const [detailOpen, setDetailOpen] = useState(false)
   const { toast } = useToast()
 
   const loadData = async () => {
-    const [p, g] = await Promise.all([getPlanning(), getGoals()])
-    setPlanning(p || { mission: '', vision: '', values: '', strategy: '' })
+    const [p, g, t] = await Promise.all([getPlanning(), getGoals(), getTasks()])
+    setPlanning(p || { mission: '', vision: '', values: '', strategy: '', priorities: '' })
     setGoals(g)
+    setTasks(t)
   }
 
   useEffect(() => {
     loadData()
   }, [])
-  useRealtime('goals', async () => {
-    setGoals(await getGoals())
-  })
+  useRealtime('goals', loadData)
+  useRealtime('tasks', loadData)
+  useRealtime('business_planning', loadData)
 
-  const handleSavePlan = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setSavingPlan(true)
-    try {
-      const formData = new FormData(e.currentTarget)
-      await savePlanning(planning?.id, Object.fromEntries(formData))
-      toast({ title: 'Planejamento salvo com sucesso!' })
-    } catch {
-      toast({ title: 'Erro ao salvar', variant: 'destructive' })
-    }
-    setSavingPlan(false)
+  const taskCountByGoal = useMemo(() => {
+    const m: Record<string, number> = {}
+    tasks.forEach((t) => {
+      if (t.goal_id) m[t.goal_id] = (m[t.goal_id] || 0) + 1
+    })
+    return m
+  }, [tasks])
+
+  const objectiveGroups = useMemo(() => {
+    const g: Record<string, any[]> = {}
+    goals.forEach((goal) => {
+      const k = goal.related_objective || 'Sem Objetivo'
+      ;(g[k] ||= []).push(goal)
+    })
+    return g
+  }, [goals])
+
+  const handleNew = () => {
+    setEditingGoal(null)
+    setFormOpen(true)
   }
-
-  const handleAddGoal = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleEdit = (g: any) => {
+    setDetailOpen(false)
+    setEditingGoal(g)
+    setFormOpen(true)
+  }
+  const handleDelete = async (id: string) => {
     try {
-      const formData = new FormData(e.currentTarget)
-      const data = Object.fromEntries(formData)
-      await createGoal({
-        title: data.title,
-        description: data.description,
-        target_value: Number(data.target_value),
-        current_value: Number(data.current_value) || 0,
-        deadline: new Date(data.deadline as string).toISOString(),
-        status: data.status,
-      })
-      setGoalDialogOpen(false)
-      toast({ title: 'Meta criada com sucesso!' })
+      await deleteGoal(id)
+      setDetailOpen(false)
+      toast({ title: 'Meta excluída' })
     } catch {
-      toast({ title: 'Erro ao criar meta', variant: 'destructive' })
+      toast({ title: 'Erro ao excluir', variant: 'destructive' })
     }
   }
-
-  const toggleGoalStatus = async (goal: any) => {
-    const nextStatus = goal.status === 'completed' ? 'in_progress' : 'completed'
-    await updateGoal(goal.id, { status: nextStatus })
+  const handleCardClick = (g: any) => {
+    setDetailGoal(g)
+    setDetailOpen(true)
   }
 
   const handleExportPDF = () => {
@@ -89,18 +119,20 @@ export default function Planning() {
           { label: 'Visão', value: planning.vision || '' },
           { label: 'Valores', value: planning.values || '' },
           { label: 'Estratégia', value: planning.strategy || '' },
+          { label: 'Prioridades', value: planning.priorities || '' },
         ],
       })
     }
     sections.push({
       type: 'table',
       title: 'Metas',
-      headers: ['Título', 'Status', 'Atual', 'Alvo', 'Prazo'],
+      headers: ['Título', 'Objetivo', 'Status', 'Prioridade', 'Progresso', 'Prazo'],
       rows: goals.map((g) => [
         g.title,
-        g.status,
-        g.current_value || 0,
-        g.target_value || 0,
+        g.related_objective || '',
+        GOAL_STATUS_LABELS[g.status] || '',
+        GOAL_PRIORITY_LABELS[g.priority] || '',
+        `${getGoalProgress(g)}%`,
         g.deadline ? formatDate(g.deadline) : '',
       ]),
     })
@@ -108,17 +140,34 @@ export default function Planning() {
   }
 
   const handleExportExcel = () => {
-    exportToExcel('planejamento', [
+    exportToExcel('planejamento-metas', [
       {
         name: 'Metas',
-        headers: ['Título', 'Descrição', 'Valor Atual', 'Valor Alvo', 'Prazo', 'Status'],
+        headers: [
+          'Título',
+          'Objetivo',
+          'Período',
+          'Indicador',
+          'Inicial',
+          'Alvo',
+          'Atual',
+          'Progresso',
+          'Prioridade',
+          'Status',
+          'Prazo',
+        ],
         rows: goals.map((g) => [
           g.title,
-          g.description || '',
-          g.current_value || 0,
+          g.related_objective || '',
+          getMonthLabel(g.period_month),
+          g.indicator || '',
+          g.initial_value || 0,
           g.target_value || 0,
+          g.current_value || 0,
+          getGoalProgress(g),
+          GOAL_PRIORITY_LABELS[g.priority] || '',
+          GOAL_STATUS_LABELS[g.status] || '',
           g.deadline ? formatDate(g.deadline) : '',
-          g.status,
         ]),
       },
     ])
@@ -126,192 +175,182 @@ export default function Planning() {
 
   if (!planning) return null
 
-  const selectClass =
-    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+  const filteredGoals =
+    view === 'monthly' && monthFilter ? goals.filter((g) => g.period_month === monthFilter) : goals
+
+  const sortedByPriority = [...goals].sort((a, b) => {
+    const o: Record<string, number> = { high: 0, medium: 1, low: 2 }
+    return (o[a.priority] ?? 3) - (o[b.priority] ?? 3)
+  })
+
+  const renderGrid = (list: any[]) =>
+    list.length === 0 ? (
+      <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border text-muted-foreground">
+        Nenhuma meta encontrada.
+      </div>
+    ) : (
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {list.map((g) => (
+          <GoalCard
+            key={g.id}
+            goal={g}
+            onClick={() => handleCardClick(g)}
+            linkedTasksCount={taskCountByGoal[g.id]}
+          />
+        ))}
+      </div>
+    )
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Planejamento & Metas
           </h1>
           <p className="text-muted-foreground">
-            Defina o rumo do seu negócio e acompanhe seus objetivos.
+            Alinhe sua visão estratégica com a execução diária.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
-          <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-                <Plus className="mr-2 h-4 w-4" /> Nova Meta
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Criar Nova Meta</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddGoal} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Título</Label>
-                  <Input name="title" required />
-                </div>
-                <div className="space-y-2">
-                  <Label>Descrição</Label>
-                  <Textarea name="description" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Valor Alvo</Label>
-                    <Input type="number" name="target_value" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor Atual</Label>
-                    <Input type="number" name="current_value" defaultValue={0} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Prazo</Label>
-                    <Input type="date" name="deadline" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <select name="status" className={selectClass} defaultValue="in_progress">
-                      <option value="in_progress">Em Andamento</option>
-                      <option value="pending">Pendente</option>
-                      <option value="completed">Concluída</option>
-                    </select>
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Salvar Meta
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+            onClick={handleNew}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nova Meta
+          </Button>
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-1 border-border gold-accent-border h-fit">
-          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
-            <CardTitle className="text-lg text-foreground">Canvas Estratégico</CardTitle>
-          </CardHeader>
-          <CardContent className="p-6">
-            <form onSubmit={handleSavePlan} className="space-y-5">
-              {[
-                { label: 'Missão', name: 'mission', rows: 3 },
-                { label: 'Visão', name: 'vision', rows: 3 },
-                { label: 'Valores', name: 'values', rows: 3 },
-                { label: 'Estratégia Principal', name: 'strategy', rows: 4 },
-              ].map((field) => (
-                <div key={field.name} className="space-y-2">
-                  <Label>{field.label}</Label>
-                  <Textarea
-                    name={field.name}
-                    defaultValue={planning[field.name]}
-                    rows={field.rows}
-                    className="resize-none"
-                  />
-                </div>
-              ))}
-              <Button
-                type="submit"
-                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                disabled={savingPlan}
-              >
-                {savingPlan ? 'Salvando...' : 'Salvar Planejamento'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+      <StrategicContext planning={planning} onSaved={loadData} />
 
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
-            <Target className="text-primary" size={24} /> Suas Metas
-          </h2>
+      <Tabs value={view} onValueChange={(v) => setView(v as ViewTab)}>
+        <TabsList className="flex-wrap h-auto">
+          <TabsTrigger value="annual">Visão Anual</TabsTrigger>
+          <TabsTrigger value="monthly">Mensal</TabsTrigger>
+          <TabsTrigger value="objective">Por Objetivo</TabsTrigger>
+          <TabsTrigger value="status">Status</TabsTrigger>
+          <TabsTrigger value="priority">Prioridades</TabsTrigger>
+          <TabsTrigger value="action_plan">Plano de Ação</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {view === 'annual' && renderGrid(goals)}
+
+      {view === 'monthly' && (
+        <div className="space-y-4">
+          <Select value={monthFilter} onValueChange={setMonthFilter}>
+            <SelectTrigger className="w-full sm:w-48">
+              <SelectValue placeholder="Filtrar por mês" />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_OPTIONS.map((m) => (
+                <SelectItem key={m.value} value={m.value}>
+                  {m.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {renderGrid(filteredGoals)}
+        </div>
+      )}
+
+      {view === 'objective' && (
+        <div className="space-y-6">
+          {Object.entries(objectiveGroups).map(([obj, list]) => (
+            <div key={obj} className="space-y-3">
+              <h3 className="text-lg font-semibold text-foreground">{obj}</h3>
+              {renderGrid(list)}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {view === 'status' && (
+        <div className="space-y-6">
+          {STATUS_ORDER.map((s) => {
+            const list = goals.filter((g) => g.status === s)
+            if (list.length === 0) return null
+            return (
+              <div key={s} className="space-y-3">
+                <Badge variant="outline" className={GOAL_STATUS_COLORS[s]}>
+                  {GOAL_STATUS_LABELS[s]}
+                </Badge>
+                {renderGrid(list)}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {view === 'priority' && renderGrid(sortedByPriority)}
+
+      {view === 'action_plan' && (
+        <div className="space-y-3">
           {goals.length === 0 ? (
             <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border text-muted-foreground">
-              Nenhuma meta cadastrada.
+              Nenhuma meta encontrada.
             </div>
           ) : (
-            <div className="grid gap-4">
-              {goals.map((goal) => {
-                const progress = goal.target_value
-                  ? Math.min(Math.round((goal.current_value / goal.target_value) * 100), 100)
-                  : 0
-                const isCompleted = goal.status === 'completed'
-                return (
-                  <Card
-                    key={goal.id}
-                    className={
-                      isCompleted ? 'bg-muted/30 opacity-75 border-border' : 'border-border'
-                    }
-                  >
-                    <CardContent className="p-5 flex items-start gap-4">
-                      <button
-                        onClick={() => toggleGoalStatus(goal)}
-                        className="mt-1 text-slate-400 hover:text-primary transition-colors"
-                      >
-                        {isCompleted ? (
-                          <CheckCircle2 className="text-emerald-400" size={24} />
-                        ) : (
-                          <Circle size={24} />
-                        )}
-                      </button>
-                      <div className="flex-1 space-y-2 min-w-0">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h3
-                              className={`font-semibold text-lg ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}
-                            >
-                              {goal.title}
-                            </h3>
-                            {goal.description && (
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {goal.description}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex items-center text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
-                            <Clock size={14} className="mr-1 text-primary" />{' '}
-                            {formatDate(goal.deadline)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-4 text-sm mt-4">
-                          <div className="flex-1">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-muted-foreground">Progresso</span>
-                              <span className="font-medium text-primary">{progress}%</span>
-                            </div>
-                            <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full transition-all duration-1000 ${isCompleted ? 'bg-emerald-500' : 'bg-primary'}`}
-                                style={{ width: `${progress}%` }}
-                              />
-                            </div>
-                          </div>
-                          <div className="text-right min-w-[80px]">
-                            <div className="text-xs text-muted-foreground">Atual / Alvo</div>
-                            <div className="font-semibold text-foreground">
-                              {goal.current_value} / {goal.target_value}
-                            </div>
-                          </div>
-                        </div>
+            goals.map((g) => (
+              <Card
+                key={g.id}
+                className="border-border cursor-pointer hover:border-primary/50 transition-colors"
+                onClick={() => handleCardClick(g)}
+              >
+                <CardContent className="p-4 flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-foreground truncate">{g.title}</h3>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <Badge variant="outline" className={GOAL_STATUS_COLORS[g.status]}>
+                        {GOAL_STATUS_LABELS[g.status]}
+                      </Badge>
+                      {g.related_objective && (
+                        <span className="text-xs text-muted-foreground">{g.related_objective}</span>
+                      )}
+                      {g.deadline && (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar size={12} />
+                          {formatDate(g.deadline)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 flex-shrink-0">
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground">Progresso</div>
+                      <div className="font-semibold text-foreground">{getGoalProgress(g)}%</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-muted-foreground flex items-center gap-1">
+                        <ListChecks size={12} /> Ações
                       </div>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
+                      <div className="font-semibold text-foreground">
+                        {taskCountByGoal[g.id] || 0}
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
           )}
         </div>
-      </div>
+      )}
+
+      <GoalForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSaved={loadData}
+        editingGoal={editingGoal}
+      />
+      <GoalDetailDialog
+        goal={detailGoal}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
     </div>
   )
 }
