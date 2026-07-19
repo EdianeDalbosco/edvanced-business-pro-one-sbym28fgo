@@ -82,7 +82,7 @@ export default function Layout() {
       <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-10">
         <div className="p-6">
           <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="Edvanced Business Pro" className="h-12 w-auto object-contain" />
+            <img src={logoUrl} alt="Edvanced Business" className="h-12 w-auto object-contain" />
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">
@@ -124,7 +124,7 @@ export default function Layout() {
                   <div className="flex items-center gap-2">
                     <img
                       src={logoUrl}
-                      alt="Edvanced Business Pro"
+                      alt="Edvanced Business"
                       className="h-12 w-auto object-contain"
                     />
                   </div>

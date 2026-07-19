@@ -36,7 +36,7 @@ export default function Login() {
             <Target size={28} className="text-primary-foreground" />
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-primary">
-            Edvanced Business Pro
+            Edvanced Business
           </CardTitle>
           <CardDescription className="text-muted-foreground">
             Acesse sua conta para gerenciar seu negócio
