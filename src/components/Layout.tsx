@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import logoUrl from '@/assets/logo-edvanced-20-56059.png'
 
 const navItems = [
   { label: 'Dashboard', icon: Home, path: '/' },
@@ -80,14 +81,8 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-10">
         <div className="p-6">
-          <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-              <Target size={20} className="text-primary-foreground" />
-            </div>
-            <span className="text-primary">
-              Edvanced <br />
-              Business Pro
-            </span>
+          <div className="flex items-center gap-2">
+            <img src={logoUrl} alt="Edvanced Business Pro" className="h-12 w-auto object-contain" />
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">
@@ -126,11 +121,12 @@ export default function Layout() {
               >
                 <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                 <div className="p-6">
-                  <div className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
-                      <Target size={20} className="text-primary-foreground" />
-                    </div>
-                    <span className="text-primary">Business Pro</span>
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={logoUrl}
+                      alt="Edvanced Business Pro"
+                      className="h-12 w-auto object-contain"
+                    />
                   </div>
                 </div>
                 <nav className="px-3 space-y-1.5 mt-2">

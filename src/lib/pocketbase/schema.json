@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T22:21:36.198Z",
+  "generatedAt": "2026-07-19T22:42:23.182Z",
   "collections": [
     {
       "name": "users",
@@ -370,6 +370,13 @@
           "type": "number",
           "required": false,
           "system": false
+        },
+        {
+          "name": "status",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["ativo", "inativo"]
         }
       ],
       "indexes": [
