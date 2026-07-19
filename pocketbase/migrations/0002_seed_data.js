@@ -1,0 +1,115 @@
+migrate(
+  (app) => {
+    const users = app.findCollectionByNameOrId('_pb_users_auth_')
+    try {
+      app.findAuthRecordByEmail('_pb_users_auth_', 'edianedalbosco@gmail.com')
+      return
+    } catch (_) {}
+
+    const user = new Record(users)
+    user.setEmail('edianedalbosco@gmail.com')
+    user.setPassword('Skip@Pass')
+    user.setVerified(true)
+    user.set('name', 'Ediane Dalbosco')
+    app.save(user)
+
+    const planningCol = app.findCollectionByNameOrId('business_planning')
+    const planning = new Record(planningCol)
+    planning.set('user_id', user.id)
+    planning.set('mission', 'Ajudar empreendedores a organizar seus negócios.')
+    planning.set(
+      'vision',
+      'Ser a principal ferramenta de gestão para solopreneurs no Brasil até 2028.',
+    )
+    planning.set('values', 'Simplicidade, Eficiência, Transparência.')
+    planning.set(
+      'strategy',
+      'Foco em aquisição de clientes via marketing de conteúdo e indicações.',
+    )
+    app.save(planning)
+
+    const goalsCol = app.findCollectionByNameOrId('goals')
+    const g1 = new Record(goalsCol)
+    g1.set('user_id', user.id)
+    g1.set('title', 'Aumentar Faturamento em 20%')
+    g1.set('target_value', 10000)
+    g1.set('current_value', 4500)
+    g1.set('status', 'in_progress')
+    g1.set('deadline', '2026-12-31 12:00:00.000Z')
+    app.save(g1)
+    const g2 = new Record(goalsCol)
+    g2.set('user_id', user.id)
+    g2.set('title', 'Lançar Novo Site')
+    g2.set('status', 'completed')
+    g2.set('deadline', '2026-06-30 12:00:00.000Z')
+    app.save(g2)
+    const g3 = new Record(goalsCol)
+    g3.set('user_id', user.id)
+    g3.set('title', 'Captar 20 novos leads')
+    g3.set('target_value', 20)
+    g3.set('current_value', 5)
+    g3.set('status', 'in_progress')
+    g3.set('deadline', '2026-08-31 12:00:00.000Z')
+    app.save(g3)
+
+    const contactsCol = app.findCollectionByNameOrId('contacts')
+    const c1 = new Record(contactsCol)
+    c1.set('user_id', user.id)
+    c1.set('name', 'João Silva')
+    c1.set('email', 'joao@example.com')
+    c1.set('type', 'prospect')
+    c1.set('pipeline_stage', 'negotiation')
+    c1.set('portal_token', $security.randomString(32))
+    app.save(c1)
+    const c2 = new Record(contactsCol)
+    c2.set('user_id', user.id)
+    c2.set('name', 'Maria Oliveira')
+    c2.set('email', 'maria@example.com')
+    c2.set('type', 'client')
+    c2.set('pipeline_stage', 'closed')
+    c2.set('portal_token', $security.randomString(32))
+    app.save(c2)
+
+    const financeCol = app.findCollectionByNameOrId('finance')
+    const f1 = new Record(financeCol)
+    f1.set('user_id', user.id)
+    f1.set('description', 'Consultoria Maria')
+    f1.set('amount', 3000)
+    f1.set('type', 'income')
+    f1.set('category', 'Serviços')
+    f1.set('date', new Date().toISOString())
+    f1.set('status', 'paid')
+    app.save(f1)
+    const f2 = new Record(financeCol)
+    f2.set('user_id', user.id)
+    f2.set('description', 'Software Assinaturas')
+    f2.set('amount', 250)
+    f2.set('type', 'expense')
+    f2.set('category', 'Software')
+    f2.set('date', new Date().toISOString())
+    f2.set('status', 'paid')
+    app.save(f2)
+
+    const tasksCol = app.findCollectionByNameOrId('tasks')
+    const t1 = new Record(tasksCol)
+    t1.set('user_id', user.id)
+    t1.set('title', 'Enviar proposta para João')
+    t1.set('priority', 'high')
+    t1.set('status', 'todo')
+    t1.set('due_date', new Date().toISOString())
+    app.save(t1)
+    const t2 = new Record(tasksCol)
+    t2.set('user_id', user.id)
+    t2.set('title', 'Revisar contrato da Maria')
+    t2.set('priority', 'medium')
+    t2.set('status', 'doing')
+    t2.set('due_date', new Date().toISOString())
+    app.save(t2)
+  },
+  (app) => {
+    try {
+      const user = app.findAuthRecordByEmail('_pb_users_auth_', 'edianedalbosco@gmail.com')
+      app.delete(user)
+    } catch (_) {}
+  },
+)
