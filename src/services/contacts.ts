@@ -15,4 +15,4 @@ export const createContact = (data: any) => {
 export const updateContact = (id: string, data: any) => pb.collection('contacts').update(id, data)
 export const deleteContact = (id: string) => pb.collection('contacts').delete(id)
 export const convertToClient = (id: string) =>
-  pb.collection('contacts').update(id, { type: 'client', pipeline_stage: 'closed' })
+  pb.collection('contacts').update(id, { type: 'client', pipeline_stage: 'fechamento' })

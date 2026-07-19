@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-19T18:35:48.420Z",
+  "generatedAt": "2026-07-19T20:57:17.140Z",
   "collections": [
     {
       "name": "users",
@@ -314,7 +314,16 @@
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["new", "negotiation", "proposal", "closed"]
+          "selectValues": [
+            "prospeccao",
+            "abordagem",
+            "agendamento",
+            "reuniao_conexao_sondagem",
+            "proposta",
+            "negociacao",
+            "fechamento",
+            "no_show"
+          ]
         },
         {
           "name": "portal_token",
@@ -335,6 +344,12 @@
           "required": false,
           "system": false,
           "autodateTriggers": ["onCreate", "onUpdate"]
+        },
+        {
+          "name": "value",
+          "type": "number",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [
@@ -448,6 +463,84 @@
           "required": false,
           "system": false,
           "collectionRef": "products"
+        },
+        {
+          "name": "mentor_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mentor_document",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mentor_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mentee_name",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mentee_document",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "mentee_address",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "sessions_count",
+          "type": "number",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "frequency",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "schedule_details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "session_location",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "payment_terms",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "city",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "district",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": ["CREATE INDEX idx_contracts_contact ON contracts (contact_id)"]

@@ -1,192 +1,447 @@
 import { useEffect, useState } from 'react'
+import { Printer } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { getContracts, deleteContract, getContractFileUrl } from '@/services/contracts'
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { createContract } from '@/services/contracts'
 import { getContacts } from '@/services/contacts'
 import { getProducts } from '@/services/products'
-import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
-import { formatCurrency, formatDate } from '@/lib/format'
-import { ContractFormDialog } from '@/components/contract-form'
-import { Plus, Trash2, FileText, Eye, Download, ShieldCheck } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Package, Wrench, AlertCircle } from 'lucide-react'
+import { useRealtime } from '@/hooks/use-realtime'
+import { formatCurrency } from '@/lib/format'
+import { generateMentoringTemplate } from '@/lib/mentoring-template'
+import { cn } from '@/lib/utils'
 
-const statusMap: Record<string, { label: string; className: string }> = {
-  draft: { label: 'Rascunho', className: 'bg-muted text-muted-foreground' },
-  active: { label: 'Vigente', className: 'bg-emerald-500 text-white' },
-  expired: { label: 'Expirado', className: 'bg-rose-500/20 text-rose-400' },
-  terminated: { label: 'Rescindido', className: 'bg-rose-500/20 text-rose-400' },
+function maskCpfCnpj(value: string) {
+  const v = value.replace(/\D/g, '')
+  if (v.length <= 11) {
+    return v
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+  return v
+    .replace(/(\d{2})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1/$2')
+    .replace(/(\d{4})(\d{1,2})$/, '$1-$2')
+}
+
+const initialForm = {
+  title: '',
+  mentor_name: '',
+  mentor_document: '',
+  mentor_address: '',
+  contact_id: '',
+  product_id: '',
+  mentee_name: '',
+  mentee_document: '',
+  mentee_address: '',
+  sessions_count: '',
+  frequency: '',
+  schedule_details: '',
+  session_location: '',
+  package_value: '',
+  payment_terms: '',
+  city: '',
+  district: '',
+  start_date: '',
+  end_date: '',
 }
 
 export default function Contracts() {
-  const [contracts, setContracts] = useState<any[]>([])
+  const { toast } = useToast()
   const [contacts, setContacts] = useState<any[]>([])
   const [products, setProducts] = useState<any[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [viewing, setViewing] = useState<any | null>(null)
-  const { toast } = useToast()
+  const [text, setText] = useState('')
+  const [formData, setFormData] = useState({ ...initialForm })
+  const [isManuallyEdited, setIsManuallyEdited] = useState(false)
 
-  const loadData = async () => {
-    const [c, ct, p] = await Promise.all([getContracts(), getContacts(), getProducts()])
-    setContracts(c)
-    setContacts(ct)
-    setProducts(p)
-  }
   useEffect(() => {
+    const loadData = async () => {
+      const c = await getContacts()
+      setContacts(c)
+      const p = await getProducts()
+      setProducts(p)
+    }
     loadData()
   }, [])
-  useRealtime('contracts', loadData)
 
-  const contactName = (id: string) => contacts.find((c) => c.id === id)?.name || '—'
+  useRealtime('products', async () => {
+    const p = await getProducts()
+    setProducts(p)
+  })
 
-  const handleDelete = async (id: string) => {
-    if (confirm('Excluir contrato?')) {
-      await deleteContract(id)
-      toast({ title: 'Excluído' })
+  useEffect(() => {
+    if (!isManuallyEdited) {
+      setText(generateMentoringTemplate(formData))
+    }
+  }, [formData, isManuallyEdited])
+
+  const handleChange = (field: string, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+    setIsManuallyEdited(false)
+  }
+
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setText(e.target.value)
+    setIsManuallyEdited(true)
+  }
+
+  const handleClientSelect = (id: string) => {
+    const client = contacts.find((c) => c.id === id)
+    setFormData((prev) => ({
+      ...prev,
+      contact_id: id,
+      mentee_name: client?.name || '',
+    }))
+    setIsManuallyEdited(false)
+  }
+
+  const handleProductSelect = (id: string) => {
+    const product = products.find((p) => p.id === id)
+    setFormData((prev) => ({
+      ...prev,
+      product_id: id,
+      package_value: product ? String(product.price) : prev.package_value,
+      title: product && !prev.title ? product.name : prev.title,
+    }))
+    setIsManuallyEdited(false)
+  }
+
+  const handlePrint = () => {
+    const printWindow = window.open('', '_blank')
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Contrato de Mentoria</title>
+            <style>
+              body { font-family: serif; line-height: 1.6; padding: 40px; color: black; white-space: pre-wrap; font-size: 14px; }
+            </style>
+          </head>
+          <body>${text}</body>
+        </html>
+      `)
+      printWindow.document.close()
+      printWindow.print()
+    }
+  }
+
+  const handleSave = async () => {
+    if (!formData.contact_id) {
+      toast({ title: 'Erro', description: 'Selecione um cliente.', variant: 'destructive' })
+      return
+    }
+    try {
+      await createContract({
+        title: formData.title || `Contrato de Mentoria - ${formData.mentee_name}`,
+        status: 'draft',
+        contact_id: formData.contact_id,
+        product_id: formData.product_id || null,
+        contract_body: text,
+        value: formData.package_value ? Number(formData.package_value) : 0,
+        mentor_name: formData.mentor_name,
+        mentor_document: formData.mentor_document,
+        mentor_address: formData.mentor_address,
+        mentee_name: formData.mentee_name,
+        mentee_document: formData.mentee_document,
+        mentee_address: formData.mentee_address,
+        sessions_count: formData.sessions_count ? Number(formData.sessions_count) : 0,
+        frequency: formData.frequency,
+        schedule_details: formData.schedule_details,
+        session_location: formData.session_location,
+        payment_terms: formData.payment_terms,
+        city: formData.city,
+        district: formData.district,
+        start_date: formData.start_date || null,
+        end_date: formData.end_date || null,
+      })
+      toast({ title: 'Sucesso', description: 'Contrato gerado com sucesso!' })
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: 'Ocorreu um erro ao salvar o contrato.',
+        variant: 'destructive',
+      })
     }
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="flex flex-col h-[calc(100vh-6rem)] animate-fade-in">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Contratos</h1>
-          <p className="text-muted-foreground">Gere contratos profissionais com cláusulas LGPD.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Contrato de Mentoria
+          </h1>
+          <p className="text-muted-foreground">
+            Preencha os dados e gere o contrato para enviar ao cliente
+          </p>
         </div>
-        <Button
-          className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
-          onClick={() => setDialogOpen(true)}
-        >
-          <Plus className="mr-2 h-4 w-4" /> Novo Contrato
+        <Button variant="outline" onClick={handlePrint} className="shrink-0 bg-background">
+          <Printer className="mr-2 h-4 w-4" /> Imprimir / PDF
         </Button>
       </div>
 
-      <ContractFormDialog
-        contacts={contacts}
-        products={products}
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSaved={loadData}
-      />
+      <div className="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden">
+        <div className="w-full lg:w-[450px] flex flex-col gap-6 overflow-y-auto pr-2 pb-8">
+          <Card className="border-border shadow-sm">
+            <CardHeader className="py-4 bg-muted/30">
+              <CardTitle className="text-base font-semibold">Dados do Mentor</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Nome / Empresa</Label>
+                <Input
+                  value={formData.mentor_name}
+                  onChange={(e) => handleChange('mentor_name', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CPF / CNPJ</Label>
+                <Input
+                  value={formData.mentor_document}
+                  onChange={(e) => handleChange('mentor_document', maskCpfCnpj(e.target.value))}
+                  maxLength={18}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input
+                  value={formData.mentor_address}
+                  onChange={(e) => handleChange('mentor_address', e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-      <Card className="border-border gold-accent-border">
-        <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
-          <CardTitle className="text-lg text-foreground flex items-center gap-2">
-            <FileText className="text-primary" size={20} /> Contratos Cadastrados
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border hover:bg-muted/30">
-                <TableHead className="text-muted-foreground">Título</TableHead>
-                <TableHead className="text-muted-foreground">Cliente</TableHead>
-                <TableHead className="text-muted-foreground">Valor</TableHead>
-                <TableHead className="text-muted-foreground">Status</TableHead>
-                <TableHead className="text-muted-foreground">LGPD</TableHead>
-                <TableHead className="text-muted-foreground">Data</TableHead>
-                <TableHead className="w-[120px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {contracts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                    Nenhum contrato cadastrado.
-                  </TableCell>
-                </TableRow>
+          <Card className="border-border shadow-sm">
+            <CardHeader className="py-4 bg-muted/30">
+              <CardTitle className="text-base font-semibold">Dados do Mentorado</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Selecionar Cliente</Label>
+                <Select value={formData.contact_id} onValueChange={handleClientSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um cliente" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Nome do Mentorado</Label>
+                <Input
+                  value={formData.mentee_name}
+                  onChange={(e) => handleChange('mentee_name', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>CPF / CNPJ</Label>
+                <Input
+                  value={formData.mentee_document}
+                  onChange={(e) => handleChange('mentee_document', maskCpfCnpj(e.target.value))}
+                  maxLength={18}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Endereço</Label>
+                <Input
+                  value={formData.mentee_address}
+                  onChange={(e) => handleChange('mentee_address', e.target.value)}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border shadow-sm">
+            <CardHeader className="py-4 bg-muted/30">
+              <CardTitle className="text-base font-semibold">Produto ou Serviço</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              {products.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-4 text-center">
+                  <AlertCircle className="h-8 w-8 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum produto ou serviço cadastrado.
+                  </p>
+                  <Link to="/products">
+                    <Button variant="outline" size="sm">
+                      Ir para Produtos &amp; Serviços
+                    </Button>
+                  </Link>
+                </div>
               ) : (
-                contracts.map((c) => (
-                  <TableRow key={c.id} className="border-border">
-                    <TableCell className="font-medium text-foreground">{c.title}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {contactName(c.contact_id)}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {c.value ? formatCurrency(c.value) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        className={
-                          statusMap[c.status]?.className || 'bg-muted text-muted-foreground'
-                        }
-                      >
-                        {statusMap[c.status]?.label || c.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {c.is_lgpd_compliant && (
-                        <ShieldCheck size={18} className="text-emerald-500" />
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{formatDate(c.created)}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        {c.contract_body && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setViewing(c)}
-                            className="text-muted-foreground hover:text-primary"
-                          >
-                            <Eye size={16} />
-                          </Button>
-                        )}
-                        {c.file && (
-                          <a
-                            href={getContractFileUrl(c) || '#'}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-muted-foreground hover:text-primary"
-                            >
-                              <Download size={16} />
-                            </Button>
-                          </a>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(c.id)}
-                          className="text-muted-foreground hover:text-rose-400"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                <div className="space-y-2">
+                  <Label>Selecionar Produto ou Serviço</Label>
+                  <Select value={formData.product_id} onValueChange={handleProductSelect}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um produto ou serviço" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          <span className="flex items-center gap-2">
+                            {p.type === 'product' ? (
+                              <Package size={14} className="text-primary" />
+                            ) : (
+                              <Wrench size={14} className="text-sky-500" />
+                            )}
+                            {p.name}
+                            <span className="text-xs text-muted-foreground">
+                              ({p.type === 'product' ? 'Produto' : 'Serviço'}) —{' '}
+                              {formatCurrency(p.price)}
+                            </span>
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
 
-      <Dialog open={!!viewing} onOpenChange={(open) => !open && setViewing(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{viewing?.title}</DialogTitle>
-          </DialogHeader>
+          <Card className="border-border shadow-sm">
+            <CardHeader className="py-4 bg-muted/30">
+              <CardTitle className="text-base font-semibold">Detalhes do Processo</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <div className="space-y-2">
+                <Label>Título do Contrato</Label>
+                <Input
+                  placeholder="Ex: Mentoria Empresarial 2026"
+                  value={formData.title}
+                  onChange={(e) => handleChange('title', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data de Início</Label>
+                  <Input
+                    type="date"
+                    value={formData.start_date}
+                    onChange={(e) => handleChange('start_date', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Data de Término</Label>
+                  <Input
+                    type="date"
+                    value={formData.end_date}
+                    onChange={(e) => handleChange('end_date', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Nº Sessões</Label>
+                  <Input
+                    type="number"
+                    value={formData.sessions_count}
+                    onChange={(e) => handleChange('sessions_count', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Frequência</Label>
+                  <Input
+                    placeholder="semanal"
+                    value={formData.frequency}
+                    onChange={(e) => handleChange('frequency', e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Datas e Horários</Label>
+                <Input
+                  placeholder="Ex: Quartas, 14h"
+                  value={formData.schedule_details}
+                  onChange={(e) => handleChange('schedule_details', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Local das Sessões</Label>
+                <Input
+                  value={formData.session_location}
+                  onChange={(e) => handleChange('session_location', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor do Pacote (R$)</Label>
+                <Input
+                  type="number"
+                  value={formData.package_value}
+                  onChange={(e) => handleChange('package_value', e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Forma de Pagamento</Label>
+                <Input
+                  placeholder="Ex: 3x de R$ 1.000,00"
+                  value={formData.payment_terms}
+                  onChange={(e) => handleChange('payment_terms', e.target.value)}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Cidade</Label>
+                  <Input
+                    value={formData.city}
+                    onChange={(e) => handleChange('city', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Comarca</Label>
+                  <Input
+                    value={formData.district}
+                    onChange={(e) => handleChange('district', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <Button
+                className="w-full mt-4 bg-[#11244e] text-white hover:bg-[#11244e]/90 shadow-md"
+                onClick={handleSave}
+              >
+                Salvar Contrato
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="flex-1 flex flex-col bg-card border border-border rounded-xl shadow-sm overflow-hidden min-h-[500px]">
+          <div className="bg-muted/30 px-6 py-4 border-b border-border flex justify-between items-center">
+            <span className="font-semibold text-foreground">Pré-visualização do Contrato</span>
+            <span className="text-xs text-muted-foreground hidden sm:block">
+              Você pode editar diretamente o texto abaixo
+            </span>
+          </div>
           <Textarea
-            readOnly
-            value={viewing?.contract_body || ''}
-            className="h-96 text-xs font-mono"
+            className={cn(
+              'flex-1 resize-none border-0 focus-visible:ring-0 rounded-none p-6 text-sm font-serif leading-relaxed h-full overflow-y-auto bg-card',
+            )}
+            value={text}
+            onChange={handleTextChange}
           />
-        </DialogContent>
-      </Dialog>
+        </div>
+      </div>
     </div>
   )
 }
