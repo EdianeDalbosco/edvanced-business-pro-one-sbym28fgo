@@ -81,9 +81,13 @@ export default function Layout() {
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <aside className="hidden md:flex w-64 flex-col bg-sidebar text-sidebar-foreground border-r border-sidebar-border shadow-xl z-10">
         <div className="p-6">
-          <div className="flex items-center gap-2">
-            <img src={logoUrl} alt="Edvanced Business" className="h-8 w-auto object-contain" />
-            <span className="font-semibold text-lg whitespace-nowrap">Edvanced Business</span>
+          <div className="flex items-center gap-3">
+            <img src={logoUrl} alt="Edvanced Business Pro" className="h-10 w-auto object-contain" />
+            <span className="font-bold text-xl leading-none text-[#D4AF37] tracking-tight">
+              Edvanced
+              <br />
+              Business Pro
+            </span>
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">
@@ -122,14 +126,16 @@ export default function Layout() {
               >
                 <SheetTitle className="sr-only">Menu de Navegação</SheetTitle>
                 <div className="p-6">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <img
                       src={logoUrl}
-                      alt="Edvanced Business"
-                      className="h-8 w-auto object-contain"
+                      alt="Edvanced Business Pro"
+                      className="h-10 w-auto object-contain"
                     />
-                    <span className="font-semibold text-lg whitespace-nowrap">
-                      Edvanced Business
+                    <span className="font-bold text-xl leading-none text-[#D4AF37] tracking-tight">
+                      Edvanced
+                      <br />
+                      Business Pro
                     </span>
                   </div>
                 </div>
