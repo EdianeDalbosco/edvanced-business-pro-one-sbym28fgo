@@ -6,35 +6,50 @@
 
 @layer base {
   :root {
-    --background: 210 40% 98%;
-    --foreground: 222.2 84% 4.9%;
+    --background: 0 0% 100%;
+    --foreground: 222 47% 11%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 222 47% 11%;
 
-    --primary: 243 75% 59%; /* Indigo 600 */
-    --primary-foreground: 210 40% 98%;
+    --primary: 46 65% 52%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
 
-    --destructive: 346 87% 60%; /* Rose 500 */
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 243 75% 59%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 46 65% 52%;
 
     --radius: 0.75rem;
+
+    --sidebar-background: 210 100% 12%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 46 65% 52%;
+    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-accent: 210 40% 18%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 210 50% 20%;
+    --sidebar-ring: 46 65% 52%;
+
+    --chart-1: 46 65% 52%;
+    --chart-2: 199 70% 50%;
+    --chart-3: 141 70% 45%;
+    --chart-4: 0 72% 55%;
+    --chart-5: 265 70% 65%;
   }
 
   * {
@@ -42,6 +57,32 @@
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  select option {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+  ::-webkit-scrollbar-thumb {
+    background: hsl(215, 16%, 65%);
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(215, 16%, 45%);
+  }
+}
+
+@layer components {
+  .gold-accent-border {
+    border-left: 2px solid hsl(var(--primary));
   }
 }
 

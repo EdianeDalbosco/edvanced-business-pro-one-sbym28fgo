@@ -8,9 +8,7 @@ import { getGoals } from '@/services/goals'
 import { getTasks } from '@/services/tasks'
 import { getContacts } from '@/services/contacts'
 import { useRealtime } from '@/hooks/use-realtime'
-import { formatCurrency, isToday, formatDate } from '@/lib/format'
-import { Button } from '@/components/ui/button'
-import { Link } from 'react-router-dom'
+import { formatCurrency, isToday } from '@/lib/format'
 
 export default function Dashboard() {
   const [finance, setFinance] = useState<any[]>([])
@@ -57,8 +55,7 @@ export default function Dashboard() {
   const tasksToday = tasks.filter((t) => t.status !== 'done' && isToday(t.due_date)).length
   const newLeads = contacts.filter((c) => {
     if (c.type !== 'prospect') return false
-    const diffDays = (new Date().getTime() - new Date(c.created).getTime()) / (1000 * 3600 * 24)
-    return diffDays <= 7
+    return (new Date().getTime() - new Date(c.created).getTime()) / (1000 * 3600 * 24) <= 7
   }).length
 
   const chartData = useMemo(() => {
@@ -78,55 +75,66 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Saldo do Mês</CardTitle>
-            <DollarSign className="h-4 w-4 text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(currentMonthSaldo)}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Metas Ativas</CardTitle>
-            <Target className="h-4 w-4 text-indigo-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeGoals}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tarefas para Hoje</CardTitle>
-            <CheckSquare className="h-4 w-4 text-rose-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{tasksToday}</div>
-          </CardContent>
-        </Card>
-        <Card className="hover:shadow-lg transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Novos Leads (7d)</CardTitle>
-            <Users className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{newLeads}</div>
-          </CardContent>
-        </Card>
+        {[
+          {
+            title: 'Saldo do Mês',
+            value: formatCurrency(currentMonthSaldo),
+            icon: DollarSign,
+            color: 'text-emerald-400',
+            bg: 'bg-emerald-500/10',
+          },
+          {
+            title: 'Metas Ativas',
+            value: activeGoals,
+            icon: Target,
+            color: 'text-primary',
+            bg: 'bg-primary/10',
+          },
+          {
+            title: 'Tarefas para Hoje',
+            value: tasksToday,
+            icon: CheckSquare,
+            color: 'text-rose-400',
+            bg: 'bg-rose-500/10',
+          },
+          {
+            title: 'Novos Leads (7d)',
+            value: newLeads,
+            icon: Users,
+            color: 'text-amber-400',
+            bg: 'bg-amber-500/10',
+          },
+        ].map((stat) => (
+          <Card
+            key={stat.title}
+            className="hover:shadow-lg transition-shadow border-border gold-accent-border"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">
+                {stat.title}
+              </CardTitle>
+              <div className={`p-2 rounded-lg ${stat.bg}`}>
+                <stat.icon className={`h-4 w-4 ${stat.color}`} />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-border">
           <CardHeader>
-            <CardTitle>Visão Financeira</CardTitle>
+            <CardTitle className="text-foreground">Visão Financeira</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ChartContainer
                 config={{
-                  Receitas: { color: 'hsl(141, 84%, 39%)' },
-                  Despesas: { color: 'hsl(346, 87%, 60%)' },
+                  Receitas: { color: 'hsl(141, 70%, 45%)' },
+                  Despesas: { color: 'hsl(0, 72%, 60%)' },
                 }}
               >
                 <ResponsiveContainer width="100%" height="100%">
@@ -141,17 +149,21 @@ export default function Dashboard() {
                         <stop offset="95%" stopColor="var(--color-Despesas)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(255,255,255,0.08)"
+                    />
                     <XAxis
                       dataKey="month"
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: '#64748b' }}
+                      tick={{ fill: '#94a3b8' }}
                     />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
-                      tick={{ fill: '#64748b' }}
+                      tick={{ fill: '#94a3b8' }}
                       tickFormatter={(val) => `R$ ${val / 1000}k`}
                     />
                     <ChartTooltip content={<ChartTooltipContent />} />
@@ -178,9 +190,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-border">
           <CardHeader>
-            <CardTitle>Top Metas</CardTitle>
+            <CardTitle className="text-foreground">Top Metas</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {goals
@@ -193,12 +205,14 @@ export default function Dashboard() {
                 return (
                   <div key={goal.id} className="space-y-2">
                     <div className="flex justify-between text-sm">
-                      <span className="font-medium truncate mr-2">{goal.title}</span>
-                      <span className="text-slate-500">{progress}%</span>
+                      <span className="font-medium truncate mr-2 text-foreground">
+                        {goal.title}
+                      </span>
+                      <span className="text-primary font-semibold">{progress}%</span>
                     </div>
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-indigo-600 transition-all duration-1000 ease-out"
+                        className="h-full bg-primary transition-all duration-1000 ease-out"
                         style={{ width: `${progress}%` }}
                       />
                     </div>
@@ -206,7 +220,7 @@ export default function Dashboard() {
                 )
               })}
             {goals.length === 0 && (
-              <p className="text-sm text-slate-500 text-center py-4">Nenhuma meta ativa.</p>
+              <p className="text-sm text-muted-foreground text-center py-4">Nenhuma meta ativa.</p>
             )}
           </CardContent>
         </Card>

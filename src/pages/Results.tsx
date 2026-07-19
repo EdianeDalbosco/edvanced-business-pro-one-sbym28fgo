@@ -1,113 +1,220 @@
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { useEffect, useState, useMemo } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts'
 import { getTransactions } from '@/services/finance'
+import { getGoals } from '@/services/goals'
+import { getTasks } from '@/services/tasks'
 import { getContacts } from '@/services/contacts'
+import { useRealtime } from '@/hooks/use-realtime'
 import { formatCurrency } from '@/lib/format'
-import { Activity, TrendingUp, Users } from 'lucide-react'
+import { TrendingUp, Target, CheckSquare, Users } from 'lucide-react'
+
+const COLORS = ['#d4a017', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6']
+const TASK_COLORS = { todo: '#64748b', doing: '#f59e0b', done: '#10b981' }
 
 export default function Results() {
   const [finance, setFinance] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [tasks, setTasks] = useState<any[]>([])
   const [contacts, setContacts] = useState<any[]>([])
 
-  useEffect(() => {
-    Promise.all([getTransactions(), getContacts()]).then(([f, c]) => {
+  const loadData = async () => {
+    try {
+      const [f, g, t, c] = await Promise.all([
+        getTransactions(),
+        getGoals(),
+        getTasks(),
+        getContacts(),
+      ])
       setFinance(f)
+      setGoals(g)
+      setTasks(t)
       setContacts(c)
-    })
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
   }, [])
+  useRealtime('finance', loadData)
+  useRealtime('goals', loadData)
+  useRealtime('tasks', loadData)
+  useRealtime('contacts', loadData)
 
-  const totalIncome = finance.filter((f) => f.type === 'income').reduce((a, b) => a + b.amount, 0)
-  const totalExpense = finance.filter((f) => f.type === 'expense').reduce((a, b) => a + b.amount, 0)
-  const ltv =
-    contacts.filter((c) => c.type === 'client').length > 0
-      ? totalIncome / contacts.filter((c) => c.type === 'client').length
-      : 0
+  const totalIncome = finance.filter((t) => t.type === 'income').reduce((a, b) => a + b.amount, 0)
+  const totalExpense = finance.filter((t) => t.type === 'expense').reduce((a, b) => a + b.amount, 0)
+  const completedGoals = goals.filter((g) => g.status === 'completed').length
+  const doneTasks = tasks.filter((t) => t.status === 'done').length
+  const clientCount = contacts.filter((c) => c.type === 'client').length
 
-  const totalContacts = contacts.length
-  const clients = contacts.filter((c) => c.type === 'client').length
-  const conversionRate = totalContacts > 0 ? Math.round((clients / totalContacts) * 100) : 0
+  const monthlyData = useMemo(() => {
+    const map: Record<string, any> = {}
+    finance.forEach((f) => {
+      const d = new Date(f.date)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      if (!map[key]) map[key] = { month: key, Receitas: 0, Despesas: 0 }
+      if (f.type === 'income') map[key].Receitas += f.amount
+      else map[key].Despesas += f.amount
+    })
+    return Object.values(map)
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-6)
+  }, [finance])
+
+  const taskData = useMemo(() => {
+    const counts: Record<string, number> = { todo: 0, doing: 0, done: 0 }
+    tasks.forEach((t) => {
+      counts[t.status] = (counts[t.status] || 0) + 1
+    })
+    return Object.entries(counts).map(([name, value]) => ({
+      name: name === 'todo' ? 'A Fazer' : name === 'doing' ? 'Fazendo' : 'Concluído',
+      value,
+      color: TASK_COLORS[name as keyof typeof TASK_COLORS],
+    }))
+  }, [tasks])
+
+  const stats = [
+    {
+      label: 'Receita Total',
+      value: formatCurrency(totalIncome),
+      icon: TrendingUp,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      label: 'Despesa Total',
+      value: formatCurrency(totalExpense),
+      icon: TrendingUp,
+      color: 'text-rose-400',
+      bg: 'bg-rose-500/10',
+    },
+    {
+      label: 'Metas Concluídas',
+      value: completedGoals,
+      icon: Target,
+      color: 'text-primary',
+      bg: 'bg-primary/10',
+    },
+    {
+      label: 'Tarefas Concluídas',
+      value: doneTasks,
+      icon: CheckSquare,
+      color: 'text-emerald-400',
+      bg: 'bg-emerald-500/10',
+    },
+    {
+      label: 'Clientes Ativos',
+      value: clientCount,
+      icon: Users,
+      color: 'text-sky-400',
+      bg: 'bg-sky-500/10',
+    },
+  ]
 
   return (
     <div className="space-y-8 animate-fade-in">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Resultados & Análises</h1>
-        <p className="text-slate-500">Métricas de performance global do seu negócio.</p>
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">Resultados</h1>
+        <p className="text-muted-foreground">Acompanhe a performance geral do seu negócio.</p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        <Card className="bg-indigo-600 text-white shadow-xl shadow-indigo-600/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Activity size={24} />
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="border-border gold-accent-border">
+            <CardContent className="p-5">
+              <div className={`inline-flex p-2 rounded-lg ${stat.bg} ${stat.color} mb-3`}>
+                <stat.icon size={18} />
               </div>
-              <div className="font-medium text-indigo-100">Margem de Lucro Bruta</div>
+              <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
+              <h3 className="text-xl font-bold text-foreground">{stat.value}</h3>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        <Card className="border-border">
+          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
+            <CardTitle className="text-lg text-foreground">Receitas vs Despesas</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="h-[300px]">
+              <ChartContainer
+                config={{
+                  Receitas: { color: 'hsl(141, 70%, 45%)' },
+                  Despesas: { color: 'hsl(0, 72%, 60%)' },
+                }}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      vertical={false}
+                      stroke="rgba(255,255,255,0.08)"
+                    />
+                    <XAxis
+                      dataKey="month"
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: '#94a3b8' }}
+                    />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tick={{ fill: '#94a3b8' }}
+                      tickFormatter={(val) => `${val / 1000}k`}
+                    />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="Receitas" fill="var(--color-Receitas)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Despesas" fill="var(--color-Despesas)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </div>
-            <div className="text-4xl font-bold">
-              {totalIncome > 0 ? Math.round(((totalIncome - totalExpense) / totalIncome) * 100) : 0}
-              %
-            </div>
-            <p className="text-indigo-200 mt-2 text-sm">
-              Proporção da receita retida após despesas
-            </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-emerald-500 text-white shadow-xl shadow-emerald-500/20">
+        <Card className="border-border">
+          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
+            <CardTitle className="text-lg text-foreground">Distribuição de Tarefas</CardTitle>
+          </CardHeader>
           <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <TrendingUp size={24} />
-              </div>
-              <div className="font-medium text-emerald-100">LTV Médio (Lifetime Value)</div>
+            <div className="h-[300px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={taskData}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius={60}
+                    outerRadius={80}
+                    paddingAngle={5}
+                  >
+                    {taskData.map((entry, index) => (
+                      <Cell key={index} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Legend wrapperStyle={{ color: '#94a3b8' }} />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-            <div className="text-4xl font-bold">{formatCurrency(ltv)}</div>
-            <p className="text-emerald-100 mt-2 text-sm">Valor médio gerado por cliente ativo</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-amber-500 text-white shadow-xl shadow-amber-500/20">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="p-3 bg-white/20 rounded-xl">
-                <Users size={24} />
-              </div>
-              <div className="font-medium text-amber-100">Taxa de Conversão de Leads</div>
-            </div>
-            <div className="text-4xl font-bold">{conversionRate}%</div>
-            <p className="text-amber-100 mt-2 text-sm">Proporção de prospects que fecharam</p>
           </CardContent>
         </Card>
       </div>
-
-      <Card className="border-slate-200 shadow-sm">
-        <CardHeader>
-          <CardTitle>Resumo Consolidado</CardTitle>
-          <CardDescription>O histórico completo registrado no sistema.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 pt-4">
-          <div>
-            <div className="text-sm font-medium text-slate-500">Receita Total Acumulada</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">
-              {formatCurrency(totalIncome)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500">Despesa Total Acumulada</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">
-              {formatCurrency(totalExpense)}
-            </div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500">Total de Contatos Gerados</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">{totalContacts}</div>
-          </div>
-          <div>
-            <div className="text-sm font-medium text-slate-500">Clientes Fechados</div>
-            <div className="text-2xl font-bold text-slate-800 mt-1">{clients}</div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   )
 }

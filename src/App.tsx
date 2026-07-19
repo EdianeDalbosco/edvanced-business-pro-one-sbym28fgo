@@ -7,8 +7,11 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Index'
 import Planning from './pages/Planning'
 import Finance from './pages/Finance'
-import CRM from './pages/CRM'
+import Pipeline from './pages/Pipeline'
+import Clients from './pages/Clients'
+import Marketing from './pages/Marketing'
 import Contracts from './pages/Contracts'
+import Products from './pages/Products'
 import Tasks from './pages/Tasks'
 import Results from './pages/Results'
 import Login from './pages/Login'
@@ -27,7 +30,11 @@ const App = () => (
             <Route path="/" element={<Dashboard />} />
             <Route path="/planning" element={<Planning />} />
             <Route path="/finance" element={<Finance />} />
-            <Route path="/crm" element={<CRM />} />
+            <Route path="/crm" element={<Pipeline />} />
+            <Route path="/pipeline" element={<Pipeline />} />
+            <Route path="/clients" element={<Clients />} />
+            <Route path="/marketing" element={<Marketing />} />
+            <Route path="/products" element={<Products />} />
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/results" element={<Results />} />

@@ -12,7 +12,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { getPlanning, savePlanning } from '@/services/planning'
-import { getGoals, createGoal, updateGoal, deleteGoal } from '@/services/goals'
+import { getGoals, createGoal, updateGoal } from '@/services/goals'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { Target, Plus, CheckCircle2, Circle, Clock } from 'lucide-react'
@@ -78,16 +78,23 @@ export default function Planning() {
 
   if (!planning) return null
 
+  const selectClass =
+    'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
+
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Planejamento & Metas</h1>
-          <p className="text-slate-500">Defina o rumo do seu negócio e acompanhe seus objetivos.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Planejamento & Metas
+          </h1>
+          <p className="text-muted-foreground">
+            Defina o rumo do seu negócio e acompanhe seus objetivos.
+          </p>
         </div>
         <Dialog open={goalDialogOpen} onOpenChange={setGoalDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-md">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" /> Nova Meta
             </Button>
           </DialogTrigger>
@@ -121,18 +128,17 @@ export default function Planning() {
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <select
-                    name="status"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    defaultValue="in_progress"
-                  >
+                  <select name="status" className={selectClass} defaultValue="in_progress">
                     <option value="in_progress">Em Andamento</option>
                     <option value="pending">Pendente</option>
                     <option value="completed">Concluída</option>
                   </select>
                 </div>
               </div>
-              <Button type="submit" className="w-full">
+              <Button
+                type="submit"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
                 Salvar Meta
               </Button>
             </form>
@@ -141,49 +147,33 @@ export default function Planning() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-1 border-slate-200 shadow-sm h-fit">
-          <CardHeader className="bg-slate-50 border-b border-slate-100 rounded-t-xl">
-            <CardTitle className="text-lg">Canvas Estratégico</CardTitle>
+        <Card className="lg:col-span-1 border-border gold-accent-border h-fit">
+          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
+            <CardTitle className="text-lg text-foreground">Canvas Estratégico</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSavePlan} className="space-y-5">
-              <div className="space-y-2">
-                <Label>Missão</Label>
-                <Textarea
-                  name="mission"
-                  defaultValue={planning.mission}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Visão</Label>
-                <Textarea
-                  name="vision"
-                  defaultValue={planning.vision}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Valores</Label>
-                <Textarea
-                  name="values"
-                  defaultValue={planning.values}
-                  rows={3}
-                  className="resize-none"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Estratégia Principal</Label>
-                <Textarea
-                  name="strategy"
-                  defaultValue={planning.strategy}
-                  rows={4}
-                  className="resize-none"
-                />
-              </div>
-              <Button type="submit" className="w-full" variant="outline" disabled={savingPlan}>
+              {[
+                { label: 'Missão', name: 'mission', rows: 3 },
+                { label: 'Visão', name: 'vision', rows: 3 },
+                { label: 'Valores', name: 'values', rows: 3 },
+                { label: 'Estratégia Principal', name: 'strategy', rows: 4 },
+              ].map((field) => (
+                <div key={field.name} className="space-y-2">
+                  <Label>{field.label}</Label>
+                  <Textarea
+                    name={field.name}
+                    defaultValue={planning[field.name]}
+                    rows={field.rows}
+                    className="resize-none"
+                  />
+                </div>
+              ))}
+              <Button
+                type="submit"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={savingPlan}
+              >
                 {savingPlan ? 'Salvando...' : 'Salvar Planejamento'}
               </Button>
             </form>
@@ -191,11 +181,11 @@ export default function Planning() {
         </Card>
 
         <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-xl font-semibold flex items-center gap-2">
-            <Target className="text-indigo-600" size={24} /> Suas Metas
+          <h2 className="text-xl font-semibold flex items-center gap-2 text-foreground">
+            <Target className="text-primary" size={24} /> Suas Metas
           </h2>
           {goals.length === 0 ? (
-            <div className="text-center p-12 bg-white rounded-xl border border-dashed text-slate-500">
+            <div className="text-center p-12 bg-card rounded-xl border border-dashed border-border text-muted-foreground">
               Nenhuma meta cadastrada.
             </div>
           ) : (
@@ -206,14 +196,19 @@ export default function Planning() {
                   : 0
                 const isCompleted = goal.status === 'completed'
                 return (
-                  <Card key={goal.id} className={isCompleted ? 'bg-slate-50 opacity-75' : ''}>
+                  <Card
+                    key={goal.id}
+                    className={
+                      isCompleted ? 'bg-muted/30 opacity-75 border-border' : 'border-border'
+                    }
+                  >
                     <CardContent className="p-5 flex items-start gap-4">
                       <button
                         onClick={() => toggleGoalStatus(goal)}
-                        className="mt-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                        className="mt-1 text-slate-400 hover:text-primary transition-colors"
                       >
                         {isCompleted ? (
-                          <CheckCircle2 className="text-emerald-500" size={24} />
+                          <CheckCircle2 className="text-emerald-400" size={24} />
                         ) : (
                           <Circle size={24} />
                         )}
@@ -222,34 +217,37 @@ export default function Planning() {
                         <div className="flex justify-between items-start">
                           <div>
                             <h3
-                              className={`font-semibold text-lg ${isCompleted ? 'line-through text-slate-500' : 'text-slate-800'}`}
+                              className={`font-semibold text-lg ${isCompleted ? 'line-through text-muted-foreground' : 'text-foreground'}`}
                             >
                               {goal.title}
                             </h3>
                             {goal.description && (
-                              <p className="text-sm text-slate-500 mt-1">{goal.description}</p>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {goal.description}
+                              </p>
                             )}
                           </div>
-                          <div className="flex items-center text-sm text-slate-500 bg-slate-100 px-2 py-1 rounded-md">
-                            <Clock size={14} className="mr-1" /> {formatDate(goal.deadline)}
+                          <div className="flex items-center text-sm text-muted-foreground bg-muted px-2 py-1 rounded-md">
+                            <Clock size={14} className="mr-1 text-primary" />{' '}
+                            {formatDate(goal.deadline)}
                           </div>
                         </div>
                         <div className="flex items-center gap-4 text-sm mt-4">
                           <div className="flex-1">
                             <div className="flex justify-between mb-1">
-                              <span className="text-slate-600">Progresso</span>
-                              <span className="font-medium text-slate-800">{progress}%</span>
+                              <span className="text-muted-foreground">Progresso</span>
+                              <span className="font-medium text-primary">{progress}%</span>
                             </div>
-                            <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div className="h-2.5 w-full bg-muted rounded-full overflow-hidden">
                               <div
-                                className={`h-full transition-all duration-1000 ${isCompleted ? 'bg-emerald-500' : 'bg-indigo-600'}`}
+                                className={`h-full transition-all duration-1000 ${isCompleted ? 'bg-emerald-500' : 'bg-primary'}`}
                                 style={{ width: `${progress}%` }}
                               />
                             </div>
                           </div>
                           <div className="text-right min-w-[80px]">
-                            <div className="text-xs text-slate-500">Atual / Alvo</div>
-                            <div className="font-semibold text-slate-700">
+                            <div className="text-xs text-muted-foreground">Atual / Alvo</div>
+                            <div className="font-semibold text-foreground">
                               {goal.current_value} / {goal.target_value}
                             </div>
                           </div>

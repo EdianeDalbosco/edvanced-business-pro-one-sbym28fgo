@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { Target } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -20,7 +21,6 @@ export default function Login() {
     setIsLoading(true)
     const { error } = await signIn(email, password)
     setIsLoading(false)
-
     if (error) {
       toast({ title: 'Erro ao fazer login', description: error.message, variant: 'destructive' })
     } else {
@@ -29,13 +29,18 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
-      <Card className="w-full max-w-md animate-fade-in-up">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <Card className="w-full max-w-md animate-fade-in-up border-border gold-accent-border">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold tracking-tight text-indigo-600">
+          <div className="mx-auto w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-primary/30">
+            <Target size={28} className="text-primary-foreground" />
+          </div>
+          <CardTitle className="text-2xl font-bold tracking-tight text-primary">
             Edvanced Business Pro
           </CardTitle>
-          <CardDescription>Acesse sua conta para gerenciar seu negócio</CardDescription>
+          <CardDescription className="text-muted-foreground">
+            Acesse sua conta para gerenciar seu negócio
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -62,15 +67,15 @@ export default function Login() {
             </div>
             <Button
               type="submit"
-              className="w-full bg-indigo-600 hover:bg-indigo-700"
+              className="w-full bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
               disabled={isLoading}
             >
               {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-4 text-center text-sm text-muted-foreground">
             Não tem uma conta?{' '}
-            <Link to="/signup" className="text-indigo-600 hover:underline">
+            <Link to="/signup" className="text-primary hover:underline">
               Cadastre-se
             </Link>
           </div>

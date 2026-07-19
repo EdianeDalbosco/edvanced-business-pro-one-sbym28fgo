@@ -18,16 +18,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import {
-  getTransactions,
-  createTransaction,
-  updateTransaction,
-  deleteTransaction,
-} from '@/services/finance'
+import { getTransactions, createTransaction, deleteTransaction } from '@/services/finance'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
 import { formatCurrency, formatDate } from '@/lib/format'
-import { Plus, ArrowUpCircle, ArrowDownCircle, Trash2 } from 'lucide-react'
+import { Plus, ArrowUpCircle, ArrowDownCircle, Trash2, FileText, Building2 } from 'lucide-react'
 import {
   PieChart,
   Pie,
@@ -37,12 +32,17 @@ import {
   Legend,
 } from 'recharts'
 import { Badge } from '@/components/ui/badge'
+import { extractFieldErrors, type FieldErrors } from '@/lib/pocketbase/errors'
+import { cn } from '@/lib/utils'
 
-const COLORS = ['#4f46e5', '#10b981', '#f43f5e', '#f59e0b', '#06b6d4', '#8b5cf6']
+const COLORS = ['#d4a017', '#3b82f6', '#10b981', '#f43f5e', '#8b5cf6', '#06b6d4']
+const selectClass =
+  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground'
 
 export default function Finance() {
   const [transactions, setTransactions] = useState<any[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const { toast } = useToast()
 
   const loadData = async () => setTransactions(await getTransactions())
@@ -53,6 +53,7 @@ export default function Finance() {
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setFieldErrors({})
     try {
       const formData = new FormData(e.currentTarget)
       const data = Object.fromEntries(formData)
@@ -60,10 +61,12 @@ export default function Finance() {
         ...data,
         amount: Number(data.amount),
         date: new Date(data.date as string).toISOString(),
+        issue_date: data.issue_date ? new Date(data.issue_date as string).toISOString() : '',
       })
       setDialogOpen(false)
       toast({ title: 'Transação registrada com sucesso!' })
-    } catch {
+    } catch (err) {
+      setFieldErrors(extractFieldErrors(err))
       toast({ title: 'Erro ao salvar', variant: 'destructive' })
     }
   }
@@ -76,11 +79,12 @@ export default function Finance() {
   }
 
   const expenseData = useMemo(() => {
-    const expenses = transactions.filter((t) => t.type === 'expense')
     const map: Record<string, number> = {}
-    expenses.forEach((e) => {
-      map[e.category] = (map[e.category] || 0) + e.amount
-    })
+    transactions
+      .filter((t) => t.type === 'expense')
+      .forEach((e) => {
+        map[e.category] = (map[e.category] || 0) + e.amount
+      })
     return Object.entries(map)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
@@ -97,12 +101,12 @@ export default function Finance() {
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Financeiro</h1>
-          <p className="text-slate-500">Gerencie suas receitas e despesas.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Financeiro</h1>
+          <p className="text-muted-foreground">Gerencie suas receitas e despesas.</p>
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button className="bg-indigo-600 hover:bg-indigo-700 shadow-md">
+            <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
               <Plus className="mr-2 h-4 w-4" /> Nova Transação
             </Button>
           </DialogTrigger>
@@ -128,20 +132,14 @@ export default function Finance() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Tipo</Label>
-                  <select
-                    name="type"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
+                  <select name="type" className={selectClass}>
                     <option value="income">Receita</option>
                     <option value="expense">Despesa</option>
                   </select>
                 </div>
                 <div className="space-y-2">
                   <Label>Status</Label>
-                  <select
-                    name="status"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
+                  <select name="status" className={selectClass}>
                     <option value="paid">Pago/Recebido</option>
                     <option value="pending">Pendente</option>
                   </select>
@@ -151,7 +149,45 @@ export default function Finance() {
                 <Label>Categoria</Label>
                 <Input name="category" placeholder="ex: Software, Consultoria" required />
               </div>
-              <Button type="submit" className="w-full">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data emissão documento/NF</Label>
+                  <Input
+                    type="date"
+                    name="issue_date"
+                    className={cn(fieldErrors.issue_date && 'border-rose-500')}
+                  />
+                  {fieldErrors.issue_date && (
+                    <p className="text-sm text-rose-500">{fieldErrors.issue_date}</p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label>Número documento/NF</Label>
+                  <Input
+                    name="document_number"
+                    placeholder="ex: NF-00123"
+                    className={cn(fieldErrors.document_number && 'border-rose-500')}
+                  />
+                  {fieldErrors.document_number && (
+                    <p className="text-sm text-rose-500">{fieldErrors.document_number}</p>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Centro de Custo</Label>
+                <Input
+                  name="cost_center"
+                  placeholder="ex: Administrativo, Operacional"
+                  className={cn(fieldErrors.cost_center && 'border-rose-500')}
+                />
+                {fieldErrors.cost_center && (
+                  <p className="text-sm text-rose-500">{fieldErrors.cost_center}</p>
+                )}
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+              >
                 Salvar
               </Button>
             </form>
@@ -160,87 +196,113 @@ export default function Finance() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-6">
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
-              <ArrowUpCircle size={28} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500">Total Receitas</p>
-              <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(totalIncome)}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-rose-100 text-rose-600 rounded-xl">
-              <ArrowDownCircle size={28} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500">Total Despesas</p>
-              <h3 className="text-2xl font-bold text-slate-800">{formatCurrency(totalExpense)}</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div
-              className={`p-3 rounded-xl ${totalIncome - totalExpense >= 0 ? 'bg-indigo-100 text-indigo-600' : 'bg-amber-100 text-amber-600'}`}
-            >
-              <div className="font-bold text-xl">R$</div>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-slate-500">Saldo Geral</p>
-              <h3 className="text-2xl font-bold text-slate-800">
-                {formatCurrency(totalIncome - totalExpense)}
-              </h3>
-            </div>
-          </CardContent>
-        </Card>
+        {[
+          {
+            label: 'Total Receitas',
+            value: formatCurrency(totalIncome),
+            icon: ArrowUpCircle,
+            bg: 'bg-emerald-500/10',
+            color: 'text-emerald-400',
+          },
+          {
+            label: 'Total Despesas',
+            value: formatCurrency(totalExpense),
+            icon: ArrowDownCircle,
+            bg: 'bg-rose-500/10',
+            color: 'text-rose-400',
+          },
+          {
+            label: 'Saldo Geral',
+            value: formatCurrency(totalIncome - totalExpense),
+            icon: DollarIcon,
+            bg: totalIncome - totalExpense >= 0 ? 'bg-primary/10' : 'bg-amber-500/10',
+            color: totalIncome - totalExpense >= 0 ? 'text-primary' : 'text-amber-400',
+          },
+        ].map((card) => (
+          <Card key={card.label} className="border-border gold-accent-border">
+            <CardContent className="p-6 flex items-center gap-4">
+              <div className={`p-3 rounded-xl ${card.bg} ${card.color}`}>
+                <card.icon size={28} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
+                <h3 className="text-2xl font-bold text-foreground">{card.value}</h3>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50 border-b border-slate-100 rounded-t-xl">
-            <CardTitle className="text-lg">Transações</CardTitle>
+        <Card className="lg:col-span-2 border-border">
+          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
+            <CardTitle className="text-lg text-foreground">Transações</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[100px]">Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Categoria</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Valor</TableHead>
+                <TableRow className="border-border hover:bg-muted/30">
+                  <TableHead className="w-[100px] text-muted-foreground">Data</TableHead>
+                  <TableHead className="text-muted-foreground">Descrição</TableHead>
+                  <TableHead className="text-muted-foreground">Categoria</TableHead>
+                  <TableHead className="text-muted-foreground">Doc/NF</TableHead>
+                  <TableHead className="text-muted-foreground">Centro de Custo</TableHead>
+                  <TableHead className="text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right text-muted-foreground">Valor</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {transactions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-slate-500">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhuma transação registrada.
                     </TableCell>
                   </TableRow>
                 ) : (
                   transactions.map((tx) => (
-                    <TableRow key={tx.id}>
-                      <TableCell className="font-medium">{formatDate(tx.date)}</TableCell>
-                      <TableCell>{tx.description}</TableCell>
+                    <TableRow key={tx.id} className="border-border">
+                      <TableCell className="font-medium text-foreground">
+                        {formatDate(tx.date)}
+                      </TableCell>
+                      <TableCell className="text-foreground">{tx.description}</TableCell>
                       <TableCell>
-                        <Badge variant="outline">{tx.category}</Badge>
+                        <Badge variant="outline" className="border-primary/30 text-primary">
+                          {tx.category}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {tx.document_number ? (
+                          <span className="inline-flex items-center gap-1">
+                            <FileText className="h-3 w-3" />
+                            {tx.document_number}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {tx.cost_center ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Building2 className="h-3 w-3" />
+                            {tx.cost_center}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground/40">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant={tx.status === 'paid' ? 'default' : 'secondary'}
-                          className={tx.status === 'paid' ? 'bg-slate-900' : ''}
+                          className={
+                            tx.status === 'paid' ? 'bg-primary text-primary-foreground' : ''
+                          }
                         >
                           {tx.status === 'paid' ? 'Efetivado' : 'Pendente'}
                         </Badge>
                       </TableCell>
                       <TableCell
-                        className={`text-right font-medium ${tx.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}
+                        className={`text-right font-medium ${tx.type === 'income' ? 'text-emerald-400' : 'text-rose-400'}`}
                       >
                         {tx.type === 'income' ? '+' : '-'}
                         {formatCurrency(tx.amount)}
@@ -250,7 +312,7 @@ export default function Finance() {
                           variant="ghost"
                           size="icon"
                           onClick={() => handleDelete(tx.id)}
-                          className="text-slate-400 hover:text-rose-600"
+                          className="text-muted-foreground hover:text-rose-400"
                         >
                           <Trash2 size={16} />
                         </Button>
@@ -263,14 +325,14 @@ export default function Finance() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-slate-200">
-          <CardHeader className="bg-slate-50 border-b border-slate-100 rounded-t-xl">
-            <CardTitle className="text-lg">Despesas por Categoria</CardTitle>
+        <Card className="border-border">
+          <CardHeader className="bg-muted/50 border-b border-border rounded-t-xl">
+            <CardTitle className="text-lg text-foreground">Despesas por Categoria</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="h-[300px]">
               {expenseData.length === 0 ? (
-                <div className="h-full flex items-center justify-center text-slate-500">
+                <div className="h-full flex items-center justify-center text-muted-foreground">
                   Sem dados.
                 </div>
               ) : (
@@ -284,12 +346,20 @@ export default function Finance() {
                       outerRadius={80}
                       paddingAngle={5}
                     >
-                      {expenseData.map((entry, index) => (
+                      {expenseData.map((_, index) => (
                         <Cell key={index} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <RechartsTooltip formatter={(val: number) => formatCurrency(val)} />
-                    <Legend />
+                    <RechartsTooltip
+                      contentStyle={{
+                        background: 'hsl(0, 0%, 100%)',
+                        border: '1px solid hsl(214, 32%, 91%)',
+                        borderRadius: '8px',
+                        color: 'hsl(222, 47%, 11%)',
+                      }}
+                      formatter={(val: number) => formatCurrency(val)}
+                    />
+                    <Legend wrapperStyle={{ color: 'hsl(215, 16%, 47%)' }} />
                   </PieChart>
                 </ResponsiveContainer>
               )}
@@ -299,4 +369,8 @@ export default function Finance() {
       </div>
     </div>
   )
+}
+
+function DollarIcon({ size }: { size: number }) {
+  return <span style={{ fontSize: size * 0.7, fontWeight: 700 }}>R$</span>
 }
