@@ -15,6 +15,7 @@ import {
   Package,
   Filter,
   Megaphone,
+  Settings as SettingsIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -29,8 +30,9 @@ const navItems = [
   { label: 'Clientes', icon: Users, path: '/clients' },
   { label: 'Comercial & Marketing', icon: Megaphone, path: '/marketing' },
   { label: 'Contratos', icon: FileText, path: '/contracts' },
-  { label: 'Tarefas', icon: CheckSquare, path: '/tasks' },
+  { label: 'Central de Execução', icon: CheckSquare, path: '/tasks' },
   { label: 'Resultados', icon: BarChart3, path: '/results' },
+  { label: 'Configurações', icon: SettingsIcon, path: '/settings' },
 ]
 
 export default function Layout() {
@@ -82,7 +84,10 @@ export default function Layout() {
             <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-lg shadow-primary/30">
               <Target size={20} className="text-primary-foreground" />
             </div>
-            <span className="text-primary">Business Pro</span>
+            <span className="text-primary">
+              Edvanced <br />
+              Business Pro
+            </span>
           </div>
         </div>
         <nav className="flex-1 px-3 space-y-1.5 mt-2 overflow-y-auto">

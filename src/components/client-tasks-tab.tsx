@@ -40,7 +40,7 @@ export function ClientTasksTab({ tasks, contactId }: { tasks: any[]; contactId: 
         contact_id: contactId,
         priority: data.priority,
         due_date: data.due_date ? new Date(data.due_date as string).toISOString() : null,
-        status: 'todo',
+        status: 'nao_iniciado',
       })
       setShowForm(false)
       toast({ title: 'Tarefa criada!' })

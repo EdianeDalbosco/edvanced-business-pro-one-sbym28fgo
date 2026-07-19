@@ -43,12 +43,18 @@ export function PriorityTasks({ tasks }: { tasks: any[] }) {
                 </div>
                 <span
                   className={`text-xs px-2 py-0.5 rounded-full ${
-                    task.status === 'doing'
+                    task.status === 'em_andamento'
                       ? 'bg-amber-500/10 text-amber-400'
-                      : 'bg-slate-500/10 text-slate-400'
+                      : task.status === 'aguardando'
+                        ? 'bg-cyan-500/10 text-cyan-400'
+                        : 'bg-slate-500/10 text-slate-400'
                   }`}
                 >
-                  {task.status === 'doing' ? 'Fazendo' : 'A Fazer'}
+                  {task.status === 'em_andamento'
+                    ? 'Em Andamento'
+                    : task.status === 'aguardando'
+                      ? 'Aguardando'
+                      : 'Não Iniciado'}
                 </span>
               </div>
             )

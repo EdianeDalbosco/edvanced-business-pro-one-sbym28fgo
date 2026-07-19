@@ -24,6 +24,8 @@ import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
 const selectClass =
   'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground'
 
+const typeLabel = (t: string) => (t === 'service' ? 'Serviço' : 'Produto')
+
 export default function Products() {
   const [products, setProducts] = useState<any[]>([])
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -84,10 +86,40 @@ export default function Products() {
   const handleDelete = async (id: string) => {
     if (confirm('Excluir este item do catálogo?')) {
       await deleteProduct(id)
-      toast({ title: 'Item excluído' })
+      toast({ title: 'Item excluída' })
     }
   }
 
+  const handleExportPDF = () => {
+    generatePDF(getBusinessName(), 'Catálogo de Produtos & Serviços', [
+      {
+        title: 'Produtos & Serviços',
+        type: 'table',
+        headers: ['Nome', 'Descrição', 'Tipo', 'Preço'],
+        rows: filtered.map((p) => [
+          p.name ?? '',
+          p.description ?? '',
+          typeLabel(p.type),
+          formatCurrency(p.price),
+        ]),
+      },
+    ])
+  }
+
+  const handleExportExcel = () => {
+    exportToExcel('produtos-e-servicos', [
+      {
+        name: 'Produtos & Serviços',
+        headers: ['Nome', 'Descrição', 'Tipo', 'Preço'],
+        rows: filtered.map((p) => [
+          p.name ?? '',
+          p.description ?? '',
+          typeLabel(p.type),
+          p.price ?? 0,
+        ]),
+      },
+    ])
+  }
   return (
     <div className="space-y-8 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

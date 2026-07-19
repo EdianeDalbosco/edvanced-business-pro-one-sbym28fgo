@@ -1,211 +1,205 @@
-import { useEffect, useState } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
+import { useEffect, useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import { getTasks, createTask, updateTask, deleteTask } from '@/services/tasks'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Plus, List, CalendarDays } from 'lucide-react'
+import { getTasks, updateTask, deleteTask } from '@/services/tasks'
+import { getContacts } from '@/services/contacts'
+import { getGoals } from '@/services/goals'
+import { getContracts } from '@/services/contracts'
 import { useRealtime } from '@/hooks/use-realtime'
 import { useToast } from '@/hooks/use-toast'
-import { Plus, Check, Clock, AlertCircle, Trash2 } from 'lucide-react'
-import { formatDate } from '@/lib/format'
+import { TaskForm } from '@/components/task-form'
+import { TaskListView } from '@/components/task-list-view'
+import { TaskCalendarView } from '@/components/task-calendar-view'
 import { ExportButtons } from '@/components/export-buttons'
 import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
+import { formatDate, isToday } from '@/lib/format'
+import {
+  STATUS_LABELS,
+  TYPE_LABELS,
+  PRIORITY_LABELS,
+  RECURRENCE_LABELS,
+  isDelayed,
+  isThisWeek,
+} from '@/lib/task-utils'
 
-const COLUMNS = [
-  { id: 'todo', label: 'A Fazer', icon: Clock, color: 'text-slate-400' },
-  { id: 'doing', label: 'Fazendo', icon: AlertCircle, color: 'text-amber-400' },
-  { id: 'done', label: 'Concluído', icon: Check, color: 'text-emerald-400' },
-]
-
-const selectClass =
-  'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground'
+type FilterType = 'all' | 'today' | 'weekly' | 'delayed' | 'completed' | 'by_project' | 'by_client'
 
 export default function Tasks() {
   const [tasks, setTasks] = useState<any[]>([])
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [contacts, setContacts] = useState<any[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [contracts, setContracts] = useState<any[]>([])
+  const [view, setView] = useState<'list' | 'calendar'>('list')
+  const [filter, setFilter] = useState<FilterType>('all')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editingTask, setEditingTask] = useState<any | null>(null)
   const { toast } = useToast()
 
-  const loadData = async () => setTasks(await getTasks())
+  const loadData = async () => {
+    const [t, c, g, ct] = await Promise.all([getTasks(), getContacts(), getGoals(), getContracts()])
+    setTasks(t)
+    setContacts(c)
+    setGoals(g)
+    setContracts(ct)
+  }
+
   useEffect(() => {
     loadData()
   }, [])
   useRealtime('tasks', loadData)
+  useRealtime('goals', loadData)
+  useRealtime('contracts', loadData)
 
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleEdit = (task: any) => {
+    setEditingTask(task)
+    setFormOpen(true)
+  }
+  const handleNew = () => {
+    setEditingTask(null)
+    setFormOpen(true)
+  }
+
+  const handleStatusChange = async (id: string, status: string) => {
     try {
-      const data = Object.fromEntries(new FormData(e.currentTarget))
-      await createTask({
-        ...data,
-        due_date: data.due_date ? new Date(data.due_date as string).toISOString() : null,
-      })
-      setDialogOpen(false)
-      toast({ title: 'Tarefa criada!' })
+      await updateTask(id, { status })
     } catch {
-      toast({ title: 'Erro ao criar', variant: 'destructive' })
+      toast({ title: 'Erro ao atualizar', variant: 'destructive' })
+    }
+  }
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTask(id)
+      toast({ title: 'Atividade excluída' })
+    } catch {
+      toast({ title: 'Erro ao excluir', variant: 'destructive' })
     }
   }
 
+  const filteredTasks = useMemo(() => {
+    switch (filter) {
+      case 'today':
+        return tasks.filter((t) => t.due_date && isToday(t.due_date))
+      case 'weekly':
+        return tasks.filter((t) => isThisWeek(t.due_date))
+      case 'delayed':
+        return tasks.filter((t) => isDelayed(t))
+      case 'completed':
+        return tasks.filter((t) => t.status === 'concluido')
+      default:
+        return tasks
+    }
+  }, [tasks, filter])
+
   const handleExportPDF = () => {
-    const statusLabel = (s: string) =>
-      s === 'todo' ? 'A Fazer' : s === 'doing' ? 'Fazendo' : 'Concluído'
-    const priorityLabel = (p: string) =>
-      p === 'high' ? 'Alta' : p === 'medium' ? 'Média' : 'Baixa'
-    generatePDF(getBusinessName(), 'Tarefas', [
+    generatePDF(getBusinessName(), 'Central de Execução', [
       {
         type: 'table',
-        title: 'Tarefas',
-        headers: ['Título', 'Status', 'Prioridade', 'Vencimento'],
-        rows: tasks.map((t) => [
+        title: 'Atividades',
+        headers: ['Título', 'Tipo', 'Status', 'Prioridade', 'Prazo', 'Progresso', 'Vínculos'],
+        rows: filteredTasks.map((t) => [
           t.title,
-          statusLabel(t.status),
-          priorityLabel(t.priority),
+          TYPE_LABELS[t.type || 'task'] || '',
+          STATUS_LABELS[t.status] || '',
+          PRIORITY_LABELS[t.priority] || '',
           t.due_date ? formatDate(t.due_date) : '',
+          `${t.progress_percent || 0}%`,
+          [t.expand?.contact_id?.name, t.expand?.goal_id?.title, t.expand?.contract_id?.title]
+            .filter(Boolean)
+            .join(', '),
         ]),
       },
     ])
   }
 
   const handleExportExcel = () => {
-    exportToExcel('tarefas', [
+    exportToExcel('central-execucao', [
       {
-        name: 'Tarefas',
-        headers: ['Título', 'Status', 'Prioridade', 'Vencimento'],
-        rows: tasks.map((t) => [
+        name: 'Atividades',
+        headers: [
+          'Título',
+          'Tipo',
+          'Status',
+          'Prioridade',
+          'Início',
+          'Prazo',
+          'Progresso',
+          'Área',
+          'Recorrência',
+          'Cliente',
+          'Meta',
+          'Projeto',
+        ],
+        rows: filteredTasks.map((t) => [
           t.title,
-          t.status,
-          t.priority,
+          t.type || 'task',
+          t.status || '',
+          t.priority || '',
+          t.start_date ? formatDate(t.start_date) : '',
           t.due_date ? formatDate(t.due_date) : '',
+          t.progress_percent || 0,
+          t.business_area || '',
+          RECURRENCE_LABELS[t.recurrence || 'none'] || '',
+          t.expand?.contact_id?.name || '',
+          t.expand?.goal_id?.title || '',
+          t.expand?.contract_id?.title || '',
         ]),
       },
     ])
   }
 
   return (
-    <div className="space-y-8 animate-fade-in h-full flex flex-col">
+    <div className="space-y-6 animate-fade-in h-full flex flex-col">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Tarefas</h1>
-          <p className="text-muted-foreground">Organize seu dia e aumente sua produtividade.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">Central de Execução</h1>
+          <p className="text-muted-foreground">
+            Gerencie tarefas, reuniões, compromissos e projetos em um só lugar.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <ExportButtons onExportPDF={handleExportPDF} onExportExcel={handleExportExcel} />
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20">
-                <Plus className="mr-2 h-4 w-4" /> Nova Tarefa
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Adicionar Tarefa</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAdd} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Título</Label>
-                  <Input name="title" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Data Limite</Label>
-                    <Input type="date" name="due_date" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Prioridade</Label>
-                    <select name="priority" className={selectClass}>
-                      <option value="low">Baixa</option>
-                      <option value="medium">Média</option>
-                      <option value="high">Alta</option>
-                    </select>
-                  </div>
-                </div>
-                <input type="hidden" name="status" value="todo" />
-                <Button
-                  type="submit"
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Salvar Tarefa
-                </Button>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button
+            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
+            onClick={handleNew}
+          >
+            <Plus className="mr-2 h-4 w-4" /> Nova Atividade
+          </Button>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 pb-4">
-        {COLUMNS.map((col) => (
-          <div
-            key={col.id}
-            className="bg-muted/30 p-4 rounded-xl flex flex-col h-[calc(100vh-200px)]"
-          >
-            <h3 className="font-semibold text-foreground mb-4 flex items-center gap-2">
-              <col.icon size={18} className={col.color} /> {col.label}
-              <span className="ml-auto text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground">
-                {tasks.filter((t) => t.status === col.id).length}
-              </span>
-            </h3>
-            <div className="space-y-3 overflow-y-auto flex-1 pr-1">
-              {tasks
-                .filter((t) => t.status === col.id)
-                .map((t) => (
-                  <Card
-                    key={t.id}
-                    className="bg-card border-border shadow-sm hover:shadow transition-shadow group"
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="font-medium text-foreground text-sm">{t.title}</div>
-                        {t.priority === 'high' && (
-                          <span
-                            className="w-2 h-2 rounded-full bg-rose-500 mt-1.5 flex-shrink-0"
-                            title="Alta Prioridade"
-                          />
-                        )}
-                        {t.priority === 'medium' && (
-                          <span
-                            className="w-2 h-2 rounded-full bg-amber-500 mt-1.5 flex-shrink-0"
-                            title="Média Prioridade"
-                          />
-                        )}
-                      </div>
-                      {t.due_date && (
-                        <div className="text-xs text-muted-foreground mt-2">
-                          Vence em: {formatDate(t.due_date)}
-                        </div>
-                      )}
-                      <div className="mt-4 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <select
-                          className="text-xs border-border rounded p-1 bg-background text-muted-foreground"
-                          value={t.status}
-                          onChange={(e) => updateTask(t.id, { status: e.target.value })}
-                        >
-                          {COLUMNS.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.label}
-                            </option>
-                          ))}
-                        </select>
-                        <button
-                          onClick={() => deleteTask(t.id)}
-                          className="text-muted-foreground hover:text-rose-400 transition-colors p-1"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Tabs value={view} onValueChange={(v) => setView(v as 'list' | 'calendar')}>
+        <TabsList>
+          <TabsTrigger value="list">
+            <List size={16} className="mr-1" /> Lista
+          </TabsTrigger>
+          <TabsTrigger value="calendar">
+            <CalendarDays size={16} className="mr-1" /> Calendário
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+      {view === 'list' ? (
+        <TaskListView
+          tasks={filteredTasks}
+          filter={filter}
+          onFilterChange={setFilter}
+          onEdit={handleEdit}
+          onStatusChange={handleStatusChange}
+          onDelete={handleDelete}
+          contacts={contacts}
+          contracts={contracts}
+        />
+      ) : (
+        <TaskCalendarView tasks={tasks} onEdit={handleEdit} />
+      )}
+      <TaskForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        onSaved={loadData}
+        editingTask={editingTask}
+        contacts={contacts}
+        goals={goals}
+        contracts={contracts}
+      />
     </div>
   )
 }

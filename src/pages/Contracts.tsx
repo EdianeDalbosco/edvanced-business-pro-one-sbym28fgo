@@ -60,6 +60,10 @@ const initialForm = {
   district: '',
   start_date: '',
   end_date: '',
+  objective: '',
+  steps: '',
+  deliverables: '',
+  expected_result: '',
 }
 
 export default function Contracts() {
@@ -169,6 +173,10 @@ export default function Contracts() {
         district: formData.district,
         start_date: formData.start_date || null,
         end_date: formData.end_date || null,
+        objective: formData.objective,
+        steps: formData.steps,
+        deliverables: formData.deliverables,
+        expected_result: formData.expected_result,
       })
       toast({ title: 'Sucesso', description: 'Contrato gerado com sucesso!' })
     } catch (error) {
@@ -472,6 +480,49 @@ export default function Contracts() {
                   />
                 </div>
               </div>
+
+              <Card className="border-border shadow-sm">
+                <CardHeader className="py-4 bg-muted/30">
+                  <CardTitle className="text-base font-semibold">Gestão de Projeto</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-4">
+                  <div className="space-y-2">
+                    <Label>Objetivo</Label>
+                    <Input
+                      value={formData.objective}
+                      onChange={(e) => handleChange('objective', e.target.value)}
+                      placeholder="Objetivo principal do projeto"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Etapas</Label>
+                    <Textarea
+                      rows={3}
+                      value={formData.steps}
+                      onChange={(e) => handleChange('steps', e.target.value)}
+                      placeholder="Descreva as fases do projeto..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Entregáveis</Label>
+                    <Textarea
+                      rows={3}
+                      value={formData.deliverables}
+                      onChange={(e) => handleChange('deliverables', e.target.value)}
+                      placeholder="Liste os entregáveis do projeto..."
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Resultado Esperado</Label>
+                    <Textarea
+                      rows={2}
+                      value={formData.expected_result}
+                      onChange={(e) => handleChange('expected_result', e.target.value)}
+                      placeholder="Qual o resultado esperado?"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
               <Button
                 className="w-full mt-4 bg-[#11244e] text-white hover:bg-[#11244e]/90 shadow-md"

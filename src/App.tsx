@@ -16,6 +16,7 @@ import Tasks from './pages/Tasks'
 import Results from './pages/Results'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import Settings from './pages/Settings'
 import ClientPortal from './pages/ClientPortal'
 import NotFound from './pages/NotFound'
 
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/contracts" element={<Contracts />} />
             <Route path="/tasks" element={<Tasks />} />
             <Route path="/results" element={<Results />} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/portal/:token" element={<ClientPortal />} />
