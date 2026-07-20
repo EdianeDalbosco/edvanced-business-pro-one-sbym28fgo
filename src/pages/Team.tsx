@@ -1,7 +1,19 @@
-import { useEffect, useState, useMemo } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect, useCallback } from 'react'
+import { Trash2, Users, Pencil } from 'lucide-react'
+import { useAuth } from '@/hooks/use-auth'
+import { useRealtime } from '@/hooks/use-realtime'
+import { toast } from '@/hooks/use-toast'
+import {
+  getTeamMembers,
+  removeTeamMember,
+  logTeamEvent,
+  getTeamEvents,
+  type TeamMember,
+  type TeamEvent,
+} from '@/services/team'
+import { getGoals } from '@/services/goals'
+import { getAvatarUrl } from '@/services/users'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -10,8 +22,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,265 +35,206 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  getTeamMembers,
-  deleteTeamMember,
-  getMemberAvatarUrl,
-  type TeamMember,
-} from '@/services/team'
-import { useRealtime } from '@/hooks/use-realtime'
-import { useToast } from '@/hooks/use-toast'
-import { useAuth } from '@/hooks/use-auth'
+import { Skeleton } from '@/components/ui/skeleton'
+import { TeamGoalsSection } from '@/components/team-goals-section'
+import { TeamActivityLog } from '@/components/team-activity-log'
 import { TeamMemberForm } from '@/components/team-member-form'
-import { TeamHistorySheet } from '@/components/team-history-sheet'
-import { getTeamEvents } from '@/services/team-events'
-import { TeamMemberGoals } from '@/components/team-member-goals'
-import { TeamGoalForm } from '@/components/team-goal-form'
-import { getTeamGoals } from '@/services/team-goals'
-import { Plus, Search, Pencil, Trash2, Shield, User, History } from 'lucide-react'
-
-const roleLabel = (r: string) => (r === 'manager' ? 'Gerente' : 'Membro')
 
 export default function Team() {
-  const [members, setMembers] = useState<TeamMember[]>([])
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState<TeamMember | null>(null)
-  const [search, setSearch] = useState('')
-  const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleting, setDeleting] = useState<TeamMember | null>(null)
-  const [historyOpen, setHistoryOpen] = useState(false)
-  const [events, setEvents] = useState<any[]>([])
-  const [goals, setGoals] = useState<any[]>([])
-  const [goalFormOpen, setGoalFormOpen] = useState(false)
-  const [goalMember, setGoalMember] = useState<TeamMember | null>(null)
-  const { toast } = useToast()
   const { user } = useAuth()
+  const [members, setMembers] = useState<TeamMember[]>([])
+  const [events, setEvents] = useState<TeamEvent[]>([])
+  const [goals, setGoals] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [editingMember, setEditingMember] = useState<TeamMember | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
 
-  const loadData = async () => setMembers(await getTeamMembers())
-  const loadEvents = async () => {
-    if (user?.role !== 'manager') return
+  const loadData = useCallback(async () => {
     try {
-      setEvents(await getTeamEvents())
-    } catch (e) {
-      console.error(e)
+      const [m, e, g] = await Promise.all([
+        getTeamMembers(),
+        getTeamEvents().catch(() => []),
+        getGoals().catch(() => []),
+      ])
+      setMembers(m)
+      setEvents(e)
+      setGoals(g)
+    } catch {
+      toast({ title: 'Erro', description: 'Falha ao carregar dados.', variant: 'destructive' })
+    } finally {
+      setLoading(false)
     }
-  }
-  const loadGoals = async () => {
-    if (user?.role !== 'manager') return
-    try {
-      setGoals(await getTeamGoals())
-    } catch (e) {
-      console.error(e)
-    }
-  }
+  }, [])
+
   useEffect(() => {
     loadData()
-    loadEvents()
-    loadGoals()
-  }, [user?.role])
-  useRealtime('users', loadData)
-  useRealtime('team_events', loadEvents)
-  useRealtime('tasks', loadData)
-  useRealtime('goals', loadGoals)
+  }, [loadData])
+  useRealtime('users', () => {
+    loadData()
+  })
+  useRealtime('team_events', () => {
+    loadData()
+  })
+  useRealtime('goals', () => {
+    loadData()
+  })
 
-  const filtered = useMemo(
-    () =>
-      members.filter(
-        (m) =>
-          m.name?.toLowerCase().includes(search.toLowerCase()) ||
-          m.email?.toLowerCase().includes(search.toLowerCase()),
-      ),
-    [members, search],
-  )
-
-  const openCreate = () => {
-    setEditing(null)
-    setFormOpen(true)
-  }
-  const openEdit = (m: TeamMember) => {
-    setEditing(m)
-    setFormOpen(true)
-  }
-  const openAddGoal = (m: TeamMember) => {
-    setGoalMember(m)
-    setGoalFormOpen(true)
-  }
-
-  const handleDelete = async () => {
-    if (!deleting) return
+  const handleConfirmDelete = async () => {
+    if (!memberToDelete || !user) return
+    setDeleting(true)
     try {
-      await deleteTeamMember(deleting.id)
-      setDeleteOpen(false)
-      toast({ title: 'Membro removido com sucesso!' })
+      await logTeamEvent({
+        target_user_id: memberToDelete.id,
+        manager_id: user.id,
+        action: 'member_removed',
+        details: `Member ${memberToDelete.name || memberToDelete.email} removed from the team by ${user.name || user.email}`,
+      })
+      await removeTeamMember(memberToDelete.id)
+      toast({ title: 'Member successfully removed' })
+      setMemberToDelete(null)
+      loadData()
     } catch {
-      toast({ title: 'Erro ao remover membro', variant: 'destructive' })
+      toast({ title: 'Erro', description: 'Falha ao remover membro.', variant: 'destructive' })
+    } finally {
+      setDeleting(false)
     }
+  }
+
+  const isManager = user?.role === 'manager'
+
+  if (loading) {
+    return (
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground">Equipe</h1>
-          <p className="text-muted-foreground">Gerencie os membros da sua equipe e seus acessos.</p>
-        </div>
-        <div className="flex gap-2">
-          {user?.role === 'manager' && (
-            <Button
-              variant="outline"
-              onClick={() => setHistoryOpen(true)}
-              className="border-primary/30 text-primary hover:bg-primary/10"
-            >
-              <History className="mr-2 h-4 w-4" /> Histórico
-            </Button>
-          )}
-          <Button
-            onClick={openCreate}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"
-          >
-            <Plus className="mr-2 h-4 w-4" /> Novo Membro
-          </Button>
-        </div>
+    <div className="space-y-6 p-6">
+      <div>
+        <h1 className="text-2xl font-bold">Equipe</h1>
+        <p className="text-muted-foreground">Gerencie os membros da sua equipe</p>
       </div>
 
-      <div className="relative">
-        <Search
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          size={18}
-        />
-        <Input
-          placeholder="Buscar por nome ou email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-
-      <Card className="border-border">
-        <Table>
-          <TableHeader className="bg-muted/50">
-            <TableRow className="border-border hover:bg-muted/30">
-              <TableHead className="text-muted-foreground">Nome</TableHead>
-              <TableHead className="text-muted-foreground">Email</TableHead>
-              <TableHead className="text-muted-foreground">Telefone</TableHead>
-              <TableHead className="text-muted-foreground">Função</TableHead>
-              <TableHead className="w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.length === 0 ? (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            Membros da Equipe
+          </CardTitle>
+          <CardDescription>{members.length} membros cadastrados</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Nenhum membro encontrado.
-                </TableCell>
+                <TableHead>Nome</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Telefone</TableHead>
+                <TableHead>Função</TableHead>
+                {isManager && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
-            ) : (
-              filtered.map((m) => (
-                <TableRow key={m.id} className="border-border">
-                  <TableCell className="font-medium text-foreground">
+            </TableHeader>
+            <TableBody>
+              {members.map((member) => (
+                <TableRow key={member.id}>
+                  <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-9 w-9">
-                        {m.avatar ? <AvatarImage src={getMemberAvatarUrl(m)} alt={m.name} /> : null}
-                        <AvatarFallback className="bg-primary/10 text-primary text-sm">
-                          {m.name?.charAt(0)?.toUpperCase() || '?'}
+                      <Avatar className="h-8 w-8">
+                        {member.avatar && (
+                          <AvatarImage src={getAvatarUrl(member as any)} alt={member.name} />
+                        )}
+                        <AvatarFallback>
+                          {(member.name || member.email || '?').charAt(0).toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
-                      <span>{m.name || 'Sem nome'}</span>
+                      <span className="font-medium">{member.name || 'Sem nome'}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{m.email}</TableCell>
-                  <TableCell className="text-muted-foreground">{m.phone || '-'}</TableCell>
+                  <TableCell>{member.email}</TableCell>
+                  <TableCell>{member.phone || '-'}</TableCell>
                   <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        m.role === 'manager'
-                          ? 'border-primary/30 text-primary'
-                          : 'border-muted-foreground/30 text-muted-foreground'
-                      }
-                    >
-                      {m.role === 'manager' ? (
-                        <Shield size={12} className="mr-1" />
-                      ) : (
-                        <User size={12} className="mr-1" />
-                      )}
-                      {roleLabel(m.role)}
+                    <Badge variant={member.role === 'manager' ? 'default' : 'secondary'}>
+                      {member.role === 'manager' ? 'Gerente' : 'Membro'}
                     </Badge>
                   </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => openEdit(m)}
-                        className="text-muted-foreground hover:text-primary"
-                      >
-                        <Pencil size={16} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          setDeleting(m)
-                          setDeleteOpen(true)
-                        }}
-                        className="text-muted-foreground hover:text-rose-500"
-                        disabled={m.id === user?.id}
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </TableCell>
+                  {isManager && (
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            setEditingMember(member)
+                            setFormOpen(true)
+                          }}
+                          title="Editar membro"
+                        >
+                          <Pencil className="h-4 w-4" style={{ color: '#D4AF37' }} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setMemberToDelete(member)}
+                          disabled={member.id === user?.id}
+                          title="Remover membro"
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
       </Card>
+
+      <TeamGoalsSection members={members} goals={goals} />
+      <TeamActivityLog events={events} />
 
       <TeamMemberForm
         open={formOpen}
-        onOpenChange={setFormOpen}
-        onSaved={() => {
-          loadData()
-          loadEvents()
+        onOpenChange={(open) => {
+          setFormOpen(open)
+          if (!open) setEditingMember(null)
         }}
-        editing={editing}
+        onSaved={loadData}
+        editing={editingMember}
       />
 
-      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+      <AlertDialog
+        open={!!memberToDelete}
+        onOpenChange={(open) => !open && setMemberToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover Membro</AlertDialogTitle>
+            <AlertDialogTitle>Remover membro da equipe</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover este membro? Esta ação não pode ser desfeita e o acesso
-              será revogado imediatamente.
+              Are you sure you want to remove this member? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={(e) => {
+                e.preventDefault()
+                handleConfirmDelete()
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remover
+              {deleting ? 'Removendo...' : 'Confirm'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {user?.role === 'manager' && (
-        <TeamMemberGoals members={filtered} goals={goals} onAddGoal={openAddGoal} />
-      )}
-
-      <TeamGoalForm
-        open={goalFormOpen}
-        onOpenChange={setGoalFormOpen}
-        onSaved={loadGoals}
-        member={goalMember}
-      />
-
-      <TeamHistorySheet open={historyOpen} onOpenChange={setHistoryOpen} events={events} />
     </div>
   )
 }

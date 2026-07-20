@@ -10,8 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createTeamMember, updateTeamMember, type TeamMember } from '@/services/team'
+import { createTeamMember, updateTeamMember, logTeamEvent, type TeamMember } from '@/services/team'
 import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/hooks/use-auth'
 import { extractFieldErrors, getErrorMessage, type FieldErrors } from '@/lib/pocketbase/errors'
 import { TeamSuccessDialog } from '@/components/team-success-dialog'
 
@@ -32,6 +33,7 @@ const emptyForm = {
 
 export function TeamMemberForm({ open, onOpenChange, onSaved, editing }: Props) {
   const { toast } = useToast()
+  const { user } = useAuth()
   const [form, setForm] = useState({ ...emptyForm })
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [successOpen, setSuccessOpen] = useState(false)
@@ -81,7 +83,19 @@ export function TeamMemberForm({ open, onOpenChange, onSaved, editing }: Props) 
           phone: form.phone,
           role: form.role,
         })
-        toast({ title: 'Membro atualizado com sucesso!' })
+
+        if (editing.role !== form.role && user) {
+          const oldRoleLabel = editing.role === 'manager' ? 'Gerente' : 'Membro'
+          const newRoleLabel = form.role === 'manager' ? 'Gerente' : 'Membro'
+          await logTeamEvent({
+            target_user_id: editing.id,
+            manager_id: user.id,
+            action: 'role_changed',
+            details: `Função de ${form.name} alterada de ${oldRoleLabel} para ${newRoleLabel}.`,
+          })
+        }
+
+        toast({ title: 'Colaborador atualizado com sucesso!' })
         onOpenChange(false)
         onSaved()
       } else {

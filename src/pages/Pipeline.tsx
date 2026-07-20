@@ -19,6 +19,7 @@ import { formatCurrency } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { ExportButtons } from '@/components/export-buttons'
 import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
+import { OpportunityForm } from '@/components/opportunity-form'
 
 const STAGES = [
   { id: 'prospeccao', label: 'Prospecção', color: 'border-t-blue-600' },
@@ -47,19 +48,6 @@ export default function Pipeline() {
     loadData()
   }, [])
   useRealtime('contacts', loadData)
-
-  const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    try {
-      const data = Object.fromEntries(new FormData(e.currentTarget))
-      if (data.value) data.value = Number(data.value)
-      await createContact({ ...data, type: 'prospect' })
-      setDialogOpen(false)
-      toast({ title: 'Oportunidade adicionada!' })
-    } catch {
-      toast({ title: 'Erro ao salvar', variant: 'destructive' })
-    }
-  }
 
   const handleConvert = async (id: string) => {
     await convertToClient(id)
@@ -154,37 +142,17 @@ export default function Pipeline() {
                 <Plus className="mr-2 h-4 w-4" /> Nova Oportunidade
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Adicionar Oportunidade</DialogTitle>
+                <p className="text-sm text-muted-foreground">
+                  Adicione um novo lead ou cliente à sua base.
+                </p>
               </DialogHeader>
-              <form onSubmit={handleAdd} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>Nome / Empresa</Label>
-                  <Input name="name" required />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" name="email" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Telefone</Label>
-                    <Input name="phone" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor (R$)</Label>
-                  <Input type="number" name="value" step="0.01" min="0" />
-                </div>
-                <input type="hidden" name="pipeline_stage" value="prospeccao" />
-                <Button
-                  type="submit"
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                >
-                  Salvar
-                </Button>
-              </form>
+              <OpportunityForm
+                onSuccess={() => setDialogOpen(false)}
+                onCancel={() => setDialogOpen(false)}
+              />
             </DialogContent>
           </Dialog>
         </div>

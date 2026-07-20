@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T00:41:48.316Z",
+  "generatedAt": "2026-07-20T01:40:35.942Z",
   "collections": [
     {
       "name": "users",
@@ -441,11 +441,48 @@
           "system": false
         },
         {
+          "name": "contact_nature",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["pessoa_fisica", "pessoa_juridica"]
+        },
+        {
+          "name": "organization",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "lead_source",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "next_follow_up",
+          "type": "date",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "notes",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
           "name": "status",
           "type": "select",
           "required": false,
           "system": false,
-          "selectValues": ["ativo", "inativo"]
+          "selectValues": ["lead", "ativo", "inativo"]
+        },
+        {
+          "name": "tax_id",
+          "type": "text",
+          "required": false,
+          "system": false
         }
       ],
       "indexes": [

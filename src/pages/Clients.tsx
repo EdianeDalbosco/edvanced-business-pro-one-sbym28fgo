@@ -132,7 +132,7 @@ export default function Clients() {
           const totalValue = ct.reduce((acc, c2) => acc + (Number(c2.value) || 0), 0)
           return [
             c.name,
-            c.status === 'inativo' ? 'Inativo' : 'Ativo',
+            c.status === 'lead' ? 'Lead' : c.status === 'inativo' ? 'Inativo' : 'Ativo',
             c.email || '',
             c.phone || '',
             STAGE_LABELS[c.pipeline_stage] || c.pipeline_stage || '',
@@ -162,7 +162,7 @@ export default function Clients() {
           const totalValue = ct.reduce((acc, c2) => acc + (Number(c2.value) || 0), 0)
           return [
             c.name,
-            c.status === 'inativo' ? 'Inativo' : 'Ativo',
+            c.status === 'lead' ? 'Lead' : c.status === 'inativo' ? 'Inativo' : 'Ativo',
             c.email || '',
             c.phone || '',
             STAGE_LABELS[c.pipeline_stage] || c.pipeline_stage || '',
@@ -213,12 +213,17 @@ export default function Clients() {
                   </div>
                 </div>
                 <div className="space-y-2">
+                  <Label>CPF / CNPJ</Label>
+                  <Input name="tax_id" placeholder="000.000.000-00" />
+                </div>
+                <div className="space-y-2">
                   <Label>Status</Label>
                   <Select name="status" defaultValue="ativo">
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o status" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="lead">Lead</SelectItem>
                       <SelectItem value="ativo">Ativo</SelectItem>
                       <SelectItem value="inativo">Inativo</SelectItem>
                     </SelectContent>
@@ -263,7 +268,11 @@ export default function Clients() {
                   <TableRow key={c.id} className="border-border">
                     <TableCell className="font-medium text-foreground">{c.name}</TableCell>
                     <TableCell>
-                      {c.status === 'inativo' ? (
+                      {c.status === 'lead' ? (
+                        <Badge variant="default" className="bg-blue-500 hover:bg-blue-600">
+                          Lead
+                        </Badge>
+                      ) : c.status === 'inativo' ? (
                         <Badge variant="outline" className="text-muted-foreground">
                           Inativo
                         </Badge>
@@ -385,12 +394,21 @@ export default function Clients() {
                 </div>
               </div>
               <div className="space-y-2">
+                <Label>CPF / CNPJ</Label>
+                <Input
+                  name="tax_id"
+                  defaultValue={editingClient.tax_id || ''}
+                  placeholder="000.000.000-00"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label>Status</Label>
                 <Select name="status" defaultValue={editingClient.status || 'ativo'}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o status" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="lead">Lead</SelectItem>
                     <SelectItem value="ativo">Ativo</SelectItem>
                     <SelectItem value="inativo">Inativo</SelectItem>
                   </SelectContent>
