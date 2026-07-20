@@ -26,12 +26,19 @@ import { GoalsTracker } from '@/components/dashboard/goals-tracker'
 import { PriorityTasks } from '@/components/dashboard/priority-tasks'
 import { ExportButtons } from '@/components/export-buttons'
 import { exportToExcel, generatePDF, getBusinessName } from '@/lib/export-utils'
+import { useAuth } from '@/hooks/use-auth'
+import { getTeamProductivity, getRecentTeamActivity } from '@/services/team-activity'
+import { TeamProductivity } from '@/components/dashboard/team-productivity'
+import { RecentTeamActivity } from '@/components/dashboard/recent-team-activity'
 
 export default function Dashboard() {
+  const { user } = useAuth()
   const [finance, setFinance] = useState<any[]>([])
   const [goals, setGoals] = useState<any[]>([])
   const [tasks, setTasks] = useState<any[]>([])
   const [contacts, setContacts] = useState<any[]>([])
+  const [productivity, setProductivity] = useState<any[]>([])
+  const [activity, setActivity] = useState<any[]>([])
 
   const loadData = async () => {
     try {
@@ -50,13 +57,29 @@ export default function Dashboard() {
     }
   }
 
+  const loadTeamData = async () => {
+    if (user?.role !== 'manager') return
+    try {
+      const [prod, act] = await Promise.all([getTeamProductivity(), getRecentTeamActivity()])
+      setProductivity(prod)
+      setActivity(act)
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   useEffect(() => {
     loadData()
-  }, [])
+    loadTeamData()
+  }, [user?.role])
   useRealtime('finance', loadData)
   useRealtime('goals', loadData)
-  useRealtime('tasks', loadData)
+  useRealtime('tasks', () => {
+    loadData()
+    loadTeamData()
+  })
   useRealtime('contacts', loadData)
+  useRealtime('team_events', loadTeamData)
 
   const metrics = useMemo(() => {
     const paidIncome = getCurrentMonthPaidIncome(finance)
@@ -76,8 +99,10 @@ export default function Dashboard() {
     }
   }, [finance])
 
-  const activeGoals = useMemo(() => getActiveGoals(goals), [goals])
-  const priorityTasks = useMemo(() => getPriorityTasks(tasks), [tasks])
+  const myGoals = useMemo(() => goals.filter((g) => g.user_id === user?.id), [goals, user?.id])
+  const myTasks = useMemo(() => tasks.filter((t) => t.user_id === user?.id), [tasks, user?.id])
+  const activeGoals = useMemo(() => getActiveGoals(myGoals), [myGoals])
+  const priorityTasks = useMemo(() => getPriorityTasks(myTasks), [myTasks])
   const opportunities = useMemo(() => getActiveOpportunities(contacts), [contacts])
 
   const handleExportPDF = () => {
@@ -200,6 +225,13 @@ export default function Dashboard() {
         <GoalsTracker goals={activeGoals} />
         <PriorityTasks tasks={priorityTasks} />
       </div>
+
+      {user?.role === 'manager' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <TeamProductivity members={productivity} goals={goals} />
+          <RecentTeamActivity activities={activity} />
+        </div>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { AuthProvider } from '@/hooks/use-auth'
+import { NotificationProvider } from '@/hooks/use-notifications'
 import Layout from './components/Layout'
 import Dashboard from './pages/Index'
 import Planning from './pages/Planning'
@@ -17,37 +18,41 @@ import Results from './pages/Results'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import Settings from './pages/Settings'
+import Team from './pages/Team'
 import ClientPortal from './pages/ClientPortal'
 import NotFound from './pages/NotFound'
 
 const App = () => (
   <AuthProvider>
-    <BrowserRouter>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          <Route element={<Layout />}>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/planning" element={<Planning />} />
-            <Route path="/finance" element={<Finance />} />
-            <Route path="/crm" element={<Pipeline />} />
-            <Route path="/pipeline" element={<Pipeline />} />
-            <Route path="/clients" element={<Clients />} />
-            <Route path="/marketing" element={<Marketing />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/contracts" element={<Contracts />} />
-            <Route path="/tasks" element={<Tasks />} />
-            <Route path="/results" element={<Results />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/portal/:token" element={<ClientPortal />} />
-          </Route>
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </BrowserRouter>
+    <NotificationProvider>
+      <BrowserRouter>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/planning" element={<Planning />} />
+              <Route path="/finance" element={<Finance />} />
+              <Route path="/crm" element={<Pipeline />} />
+              <Route path="/pipeline" element={<Pipeline />} />
+              <Route path="/clients" element={<Clients />} />
+              <Route path="/marketing" element={<Marketing />} />
+              <Route path="/products" element={<Products />} />
+              <Route path="/contracts" element={<Contracts />} />
+              <Route path="/tasks" element={<Tasks />} />
+              <Route path="/results" element={<Results />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/team" element={<Team />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/portal/:token" element={<ClientPortal />} />
+            </Route>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </BrowserRouter>
+    </NotificationProvider>
   </AuthProvider>
 )
 

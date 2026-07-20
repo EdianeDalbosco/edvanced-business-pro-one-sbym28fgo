@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
+import { NotificationBell } from '@/components/notification-bell'
 import logoUrl from '@/assets/design-sem-nome-4-3f1f0.png'
 
 const navItems = [
@@ -33,6 +34,7 @@ const navItems = [
   { label: 'Contratos', icon: FileText, path: '/contracts' },
   { label: 'Central de Execução', icon: CheckSquare, path: '/tasks' },
   { label: 'Resultados', icon: BarChart3, path: '/results' },
+  { label: 'Equipe', icon: Users, path: '/team' },
   { label: 'Configurações', icon: SettingsIcon, path: '/settings' },
 ]
 
@@ -161,6 +163,7 @@ export default function Layout() {
           </div>
 
           <div className="flex items-center gap-2">
+            {user?.role === 'manager' && <NotificationBell />}
             <Button
               size="sm"
               className="hidden sm:flex bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20"

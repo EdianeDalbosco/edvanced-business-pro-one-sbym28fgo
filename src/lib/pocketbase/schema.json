@@ -1,15 +1,15 @@
 {
-  "generatedAt": "2026-07-19T23:21:46.334Z",
+  "generatedAt": "2026-07-20T00:41:48.316Z",
   "collections": [
     {
       "name": "users",
       "type": "auth",
       "apiRules": {
-        "list": "id = @request.auth.id",
-        "view": "id = @request.auth.id",
+        "list": "@request.auth.id != ''",
+        "view": "@request.auth.id != ''",
         "create": "",
-        "update": "id = @request.auth.id",
-        "delete": "id = @request.auth.id"
+        "update": "@request.auth.id != ''",
+        "delete": "@request.auth.id != ''"
       },
       "fields": [
         {
@@ -43,6 +43,13 @@
           "type": "text",
           "required": false,
           "system": false
+        },
+        {
+          "name": "role",
+          "type": "select",
+          "required": false,
+          "system": false,
+          "selectValues": ["manager", "member"]
         }
       ],
       "indexes": [
@@ -119,11 +126,11 @@
       "name": "goals",
       "type": "base",
       "apiRules": {
-        "list": "user_id = @request.auth.id",
-        "view": "user_id = @request.auth.id",
+        "list": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
+        "view": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
         "create": "@request.auth.id != ''",
-        "update": "user_id = @request.auth.id",
-        "delete": "user_id = @request.auth.id"
+        "update": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
+        "delete": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")"
       },
       "fields": [
         {
@@ -662,11 +669,11 @@
       "name": "tasks",
       "type": "base",
       "apiRules": {
-        "list": "user_id = @request.auth.id",
-        "view": "user_id = @request.auth.id",
+        "list": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
+        "view": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
         "create": "@request.auth.id != ''",
-        "update": "user_id = @request.auth.id",
-        "delete": "user_id = @request.auth.id"
+        "update": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")",
+        "delete": "@request.auth.id != \"\" && (user_id = @request.auth.id || @request.auth.role = \"manager\")"
       },
       "fields": [
         {
@@ -1104,6 +1111,61 @@
         }
       ],
       "indexes": ["CREATE INDEX idx_interactions_contact ON client_interactions (contact_id, date)"]
+    },
+    {
+      "name": "team_events",
+      "type": "base",
+      "apiRules": {
+        "list": "@request.auth.role = \"manager\"",
+        "view": "@request.auth.role = \"manager\"",
+        "create": "@request.auth.id != \"\"",
+        "update": "@request.auth.role = \"manager\"",
+        "delete": "@request.auth.role = \"manager\""
+      },
+      "fields": [
+        {
+          "name": "target_user_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "manager_id",
+          "type": "relation",
+          "required": true,
+          "system": false,
+          "collectionRef": "users"
+        },
+        {
+          "name": "action",
+          "type": "select",
+          "required": true,
+          "system": false,
+          "selectValues": ["member_added", "member_removed", "role_changed"]
+        },
+        {
+          "name": "details",
+          "type": "text",
+          "required": false,
+          "system": false
+        },
+        {
+          "name": "created",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate"]
+        },
+        {
+          "name": "updated",
+          "type": "autodate",
+          "required": false,
+          "system": false,
+          "autodateTriggers": ["onCreate", "onUpdate"]
+        }
+      ],
+      "indexes": ["CREATE INDEX idx_team_events_created ON team_events (created)"]
     }
   ]
 }
